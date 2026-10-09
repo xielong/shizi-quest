@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>识字大冒险 · 小朋友识字量小测试</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(900px 500px at 8% -6%, #dff0ff 0%, transparent 60%),
+    radial-gradient(800px 520px at 96% 4%, #fff2d6 0%, transparent 62%),
+    radial-gradient(900px 600px at 50% 110%, #e9e3ff 0%, transparent 60%),
+    linear-gradient(160deg,#f7fbff 0%,#fdfaf3 55%,#f6f4ff 100%);
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+:root{
+  --ink:#2b3a55; --ink-soft:#71809e; --line:#e6ecf8;
+  --sky:#5cb8ff; --sun:#ffc93c; --coral:#ff8f7a; --mint:#4fd6a4; --lav:#a98bff;
+  --lv:var(--sky);
+  --ok:#25b981; --no:#ff9a76;
+}
+#app{position:relative;max-width:780px;margin:0 auto;padding:14px 14px 26px;min-height:100%}
+.screen{display:none;animation:screenIn .35s ease both}
+.screen.active{display:block}
+@keyframes screenIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---------- 通用组件 ---------- */
+.card{background:#fff;border-radius:24px;box-shadow:0 10px 26px rgba(96,124,178,.13),0 2px 6px rgba(96,124,178,.08);padding:18px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:0;border-radius:999px;padding:15px 26px;font-size:18px;font-weight:800;color:#fff;
+  background:linear-gradient(180deg,#63c0ff,#3ea6ff);box-shadow:0 6px 0 #2b8fe0,0 12px 20px rgba(62,166,255,.28);
+  cursor:pointer;transition:transform .08s ease,box-shadow .08s ease;font-family:inherit;
+}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #2b8fe0,0 6px 12px rgba(62,166,255,.25)}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:0 4px 0 #e8eefb}
+.btn.ghost:active{box-shadow:0 1px 0 #e8eefb}
+.btn.warm{background:linear-gradient(180deg,#ffd15c,#ffb52e);box-shadow:0 6px 0 #e39a13,0 12px 20px rgba(255,181,46,.3)}
+.btn.small{padding:10px 18px;font-size:15px;box-shadow:0 4px 0 #2b8fe0}
+.btn.tiny{padding:8px 14px;font-size:14px;box-shadow:0 3px 0 #e8eefb;background:#fff;color:var(--ink-soft);border:2px solid var(--line);font-weight:700}
+.spacer{flex:1}
+.row{display:flex;align-items:center;gap:10px}
+.muted{color:var(--ink-soft);font-size:13px;line-height:1.6}
+h1,h2,h3{margin:0}
+
+/* ---------- 首页 ---------- */
+.brand{text-align:center;padding:8px 0 2px}
+.brand h1{font-size:34px;letter-spacing:2px;background:linear-gradient(92deg,#3ea6ff,#a98bff 55%,#ff8f7a);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
+.brand p{margin:6px 0 0;color:var(--ink-soft);font-size:14px;letter-spacing:.5px}
+.mascot-wrap{display:flex;justify-content:center;margin:6px 0 2px}
+.mascot{width:126px;height:168px;animation:bob 2.6s ease-in-out infinite;transform-origin:50% 92%}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-9px) rotate(1.5deg)}}
+.mascot.pop{animation:pop .55s cubic-bezier(.3,1.7,.5,1)}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.18) rotate(4deg)}70%{transform:scale(.94)}100%{transform:scale(1)}}
+/* 还在"没长出来"状态的零件先藏起来 */
+.mascot .p-part{display:none}
+.mascot .p-part.on{display:block}
+.mascot .m-eye-happy,.mascot .m-mouth-happy{display:none}
+.mascot.happy .m-eye-open,.mascot.happy .m-mouth-normal{display:none}
+.mascot.happy .m-eye-happy,.mascot.happy .m-mouth-happy{display:block}
+/* 刚解锁的零件闪一下，让孩子看得见 */
+.mascot .p-part.just{animation:partIn .8s cubic-bezier(.3,1.6,.5,1)}
+@keyframes partIn{0%{opacity:0;transform:scale(.4)}55%{opacity:1;transform:scale(1.14)}100%{transform:scale(1)}}
+/* 测试页角落的小豆豆 */
+/* 测试页右下角的豆豆：小朋友每认对几个字，他就当场长一点 */
+.mini-panda{position:fixed;right:12px;bottom:96px;width:58px;height:78px;z-index:30;pointer-events:none;
+  filter:drop-shadow(0 8px 16px rgba(96,124,178,.22))}
+.mini-panda .mascot{width:100%;height:100%;animation-duration:3.4s}
+@media (min-width:1000px){.mini-panda{right:calc(50vw - 400px)}}
+.bubble{position:relative;background:#fff;border:2px solid var(--line);border-radius:18px;padding:10px 14px;font-size:15px;font-weight:700;color:var(--ink);display:inline-block;max-width:100%}
+.bubble:after{content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);width:14px;height:14px;background:#fff;border-right:2px solid var(--line);border-bottom:2px solid var(--line);rotate:45deg;border-bottom-right-radius:3px}
+/* 首页：豆豆的成长进度 */
+#pandaProg{margin-top:12px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.pp-bar{width:190px;height:10px;border-radius:999px;background:#e8eef8;overflow:hidden}
+.pp-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#5cb8ff,#a98bff);transition:width .7s cubic-bezier(.4,1.4,.5,1)}
+.pp-text{font-size:12.5px;font-weight:800;color:var(--ink-soft)}
+.pp-chips{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:290px}
+.pp-chip{font-size:16px;line-height:1;opacity:.2;filter:grayscale(1)}
+.pp-chip.on{opacity:1;filter:none}
+.pp-world{margin-top:2px;font-size:12px;font-weight:800;color:var(--ink-soft)}
+.pp-world b{color:#2f8fd6}
+
+/* ---------- 豆豆的小世界：四季场景舞台 ---------- */
+.world{position:relative;width:100%;max-width:460px;margin:10px auto 0;aspect-ratio:400/260;
+  border-radius:26px;overflow:hidden;border:3px solid #fff;background:#eaf4ff;
+  box-shadow:0 14px 30px rgba(96,124,178,.18)}
+.world-bg{position:absolute;inset:0;z-index:0}
+.world-bg svg{display:block;width:100%;height:100%}
+.world-mascot{position:absolute;left:50%;bottom:18.5%;height:64%;transform:translateX(-50%);
+  z-index:3;display:flex;align-items:flex-end;justify-content:center;cursor:pointer}
+.world-mascot .mascot{height:100%;width:auto;display:block;filter:drop-shadow(0 6px 10px rgba(58,82,128,.22))}
+/* 点一下豆豆，他会转身——转过去就能看见小尾巴 */
+@keyframes mascotFlipOut{
+  0%{transform:translateX(-50%) scaleX(1)}
+  100%{transform:translateX(-50%) scaleX(.06)}
+}
+@keyframes mascotFlipIn{
+  0%{transform:translateX(-50%) scaleX(.06)}
+  100%{transform:translateX(-50%) scaleX(1)}
+}
+.world-hint{position:absolute;right:9px;bottom:9px;z-index:5;pointer-events:none;
+  background:rgba(255,255,255,.84);border-radius:999px;padding:4px 11px;
+  font-size:11.5px;font-weight:800;color:var(--ink-soft);box-shadow:0 3px 10px rgba(96,124,178,.16)}
+.world-tag{position:absolute;left:9px;top:9px;z-index:5;display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.88);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:900;color:var(--ink);
+  box-shadow:0 3px 10px rgba(96,124,178,.18)}
+.world-mini{max-width:330px;height:auto;margin:12px auto 4px;border-radius:22px;aspect-ratio:400/260}
+/* 雪花：冬天场景解锁后开始飘 */
+.snowfall{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:4}
+.snowfall b{position:absolute;top:-16px;display:block;border-radius:50%;background:rgba(255,255,255,.95);
+  box-shadow:0 0 6px 1px rgba(255,255,255,.85);animation:snowDrop linear infinite}
+@keyframes snowDrop{
+  0%{transform:translate3d(0,0,0);opacity:0}
+  12%{opacity:.95}
+  100%{transform:translate3d(16px,320px,0);opacity:.12}
+}
+.snowfall.full{position:fixed;inset:0;z-index:21}
+.snowfall.full b{background:rgba(255,255,255,.92);
+  box-shadow:0 0 0 1px rgba(150,186,230,.4),0 0 9px 2px rgba(183,211,242,.5);
+  animation-name:snowDropFull}
+@keyframes snowDropFull{
+  0%{transform:translate3d(0,0,0);opacity:0}
+  12%{opacity:.85}
+  100%{transform:translate3d(30px,106vh,0);opacity:.05}
+}
+/* 长出零件时飘出来的那条提示 */
+.panda-toast{position:fixed;left:50%;top:19%;z-index:95;transform:translateX(-50%) translateY(-7px) scale(.85);
+  background:#fff;border:3px solid #ffd15c;border-radius:22px;padding:12px 22px;text-align:center;
+  font-size:16px;font-weight:900;color:#a1760a;box-shadow:0 18px 36px rgba(255,193,60,.38);
+  opacity:0;transition:all .4s cubic-bezier(.3,1.6,.5,1);pointer-events:none;max-width:86vw}
+.panda-toast.on{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.panda-toast .pt-e{font-size:28px;line-height:1.15}
+/* 零件墙（结果页） */
+.pw{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}
+.pw.four{grid-template-columns:repeat(4,1fr)}
+.pw.four .pw-item .e{font-size:24px}
+.pw-item{border:2px solid var(--line);border-radius:14px;padding:8px 2px;text-align:center;background:#fbfdff}
+.pw-item .e{font-size:21px;line-height:1.2;opacity:.22;filter:grayscale(1)}
+.pw-item .n{font-size:10.5px;font-weight:800;color:#b9c4d8;margin-top:2px}
+.pw-item.on{border-color:#ffd15c;background:#fffdf3;box-shadow:0 4px 12px rgba(255,197,60,.22)}
+.pw-item.on .e{opacity:1;filter:none}
+.pw-item.on .n{color:#c9930a}
+.pw-item.fresh{border-color:#4fd6a4;background:#f1fff9;animation:partIn .8s cubic-bezier(.3,1.6,.5,1)}
+.pw-item.fresh .n{color:#22a877}
+.field{margin-top:14px}
+.field label{display:block;font-size:14px;font-weight:800;color:var(--ink-soft);margin-bottom:7px}
+.field input,.field select{
+  width:100%;padding:14px 16px;border-radius:16px;border:2px solid var(--line);background:#fbfdff;
+  font-size:18px;font-weight:800;color:var(--ink);font-family:inherit;outline:none;
+}
+.field input:focus,.field select:focus{border-color:var(--sky);background:#fff}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+.mode{border:3px solid var(--line);border-radius:20px;padding:14px 12px;background:#fbfdff;cursor:pointer;text-align:left;transition:.15s;font-family:inherit}
+.mode .mt{font-size:17px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:6px}
+.mode .md{font-size:12.5px;color:var(--ink-soft);margin-top:6px;line-height:1.5}
+.mode.on{border-color:var(--sky);background:#eef8ff;box-shadow:0 8px 18px rgba(92,184,255,.2)}
+.mode.wide{grid-column:1/-1}
+.tagline{font-size:12px;background:#eef8ff;color:#2f8fd6;border-radius:999px;padding:2px 9px;font-weight:800}
+
+/* ---------- 测试页 ---------- */
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.chip{background:#fff;border:2px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:900;font-size:15px;display:flex;align-items:center;gap:6px;box-shadow:0 3px 0 #eef3fc}
+.chip .star{color:#ffb52e}
+.progress{height:14px;border-radius:999px;background:#e9eff9;overflow:hidden;box-shadow:inset 0 2px 4px rgba(96,124,178,.14)}
+.progress i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#7ed0ff,#5cb8ff);transition:width .45s cubic-bezier(.3,1.3,.5,1)}
+.lvrow{display:flex;justify-content:space-between;margin-top:8px;font-size:14px;font-weight:800;color:var(--ink-soft)}
+.stage{
+  position:relative;margin-top:14px;border-radius:28px;padding:18px 14px;min-height:330px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#f4f9ff;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--lv) 16%,#fff),#fff);
+  border:3px solid #dfe9f6;
+  border-color:color-mix(in srgb,var(--lv) 34%,#fff);
+  box-shadow:0 14px 30px rgba(96,124,178,.13);
+  overflow:hidden;
+}
+.stage:before{content:"";position:absolute;inset:-40% -10% auto -10%;height:70%;background:radial-gradient(closest-side,rgba(255,255,255,.85),transparent);pointer-events:none}
+.prompt{font-size:13.5px;font-weight:800;color:var(--ink-soft);margin-bottom:6px;text-align:center;z-index:1}
+.glyph{
+  font-size:clamp(110px,30vw,190px);line-height:1.02;font-weight:700;color:#233252;
+  letter-spacing:0;z-index:1;font-family:"Kaiti SC","STKaiti","KaiTi","PingFang SC",serif;
+  text-shadow:0 6px 0 rgba(255,255,255,.8),0 12px 22px rgba(96,124,178,.16);
+}
+.glyph.enter{animation:glyphIn .34s cubic-bezier(.3,1.6,.5,1)}
+@keyframes glyphIn{0%{opacity:0;transform:scale(.55) rotate(-7deg)}100%{opacity:1;transform:none}}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:520px;z-index:1}
+.opt{
+  position:relative;border:3px solid var(--line);border-radius:22px;background:#fff;cursor:pointer;
+  padding:12px;font-family:"Kaiti SC","STKaiti","KaiTi","PingFang SC",serif;
+  font-size:clamp(56px,15vw,84px);line-height:1.1;font-weight:700;color:#233252;
+  box-shadow:0 6px 0 #eaf0fa;transition:transform .1s,box-shadow .1s,border-color .15s;
+}
+.opt:active{transform:translateY(3px);box-shadow:0 2px 0 #eaf0fa}
+.opt.right{border-color:var(--ok);background:#eafaf3;box-shadow:0 6px 0 #c9f0e2}
+.opt.wrong{border-color:var(--no);background:#fff1ec;box-shadow:0 6px 0 #ffe0d5;animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.spk{grid-column:1/-1;justify-self:center;width:64px;height:64px;border-radius:50%;border:0;background:linear-gradient(180deg,#ffd15c,#ffb52e);box-shadow:0 5px 0 #e39a13;font-size:28px;color:#7a4b00;cursor:pointer;z-index:1;margin-top:14px;display:flex;align-items:center;justify-content:center}
+
+/* ---------- 句子认读 ---------- */
+.sent{
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:4px 2px;max-width:660px;z-index:1;
+  font-family:"Kaiti SC","STKaiti","KaiTi","PingFang SC",serif;
+}
+.sent .c{
+  font-size:clamp(32px,9vw,54px);line-height:1.45;font-weight:700;color:#233252;
+  padding:1px 4px;border-radius:14px;border:3px solid transparent;cursor:pointer;
+  transition:background .12s,color .12s,transform .12s;
+}
+.sent .c.punc{padding:1px 0;color:#9aa8c2;cursor:default}
+.sent .c.unk{color:#e0553d;background:#fff0ec;border-color:#ffd6cc}
+.sent .c.unkpop{animation:unkpop .3s cubic-bezier(.3,1.6,.5,1)}
+@keyframes unkpop{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+.sentbar{display:grid;grid-template-columns:auto 1fr;gap:12px;margin-top:14px}
+.sentbar .markcount{align-self:center;font-size:14px;font-weight:800;color:var(--ink-soft)}
+.sentbar .markcount b{color:#e0553d;font-size:18px}
+.spk:active{transform:translateY(3px);box-shadow:0 2px 0 #e39a13}
+.feedback{position:absolute;inset:auto 0 12px;display:flex;justify-content:center;pointer-events:none;z-index:3}
+.fb{background:rgba(255,255,255,.96);border:2px solid var(--line);border-radius:999px;padding:8px 20px;font-weight:900;font-size:18px;opacity:0;transform:translateY(10px) scale(.9);transition:.25s}
+.fb.show{opacity:1;transform:none}
+.fb.ok{color:#12996a;border-color:#bdeedb}
+.fb.no{color:#e0703f;border-color:#ffdccd}
+.parentbar{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.judge{border:0;border-radius:22px;padding:20px 12px;font-size:22px;font-weight:900;color:#fff;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.judge.yes{background:linear-gradient(180deg,#52d9a5,#22b981);box-shadow:0 6px 0 #159a68}
+.judge.no{background:linear-gradient(180deg,#ffb59c,#ff8f7a);box-shadow:0 6px 0 #e1705a}
+.judge:active{transform:translateY(4px);box-shadow:none}
+.judge[disabled]{opacity:.45}
+.mini{font-size:12.5px;color:var(--ink-soft);text-align:center;margin-top:10px;font-weight:700}
+.flyingstar{position:fixed;font-size:40px;color:#ffb52e;z-index:60;pointer-events:none;transition:transform .8s cubic-bezier(.4,-.1,.6,1),opacity .8s}
+
+/* ---------- 结果页 ---------- */
+.hero{text-align:center;padding:20px 16px}
+.hero .big{font-size:clamp(56px,17vw,86px);font-weight:900;line-height:1;background:linear-gradient(92deg,#3ea6ff,#a98bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .unit{font-size:24px;font-weight:900;color:var(--ink);margin-left:4px}
+.hero .rng{margin-top:8px;font-size:15px;font-weight:800;color:var(--ink-soft)}
+.starrow{display:flex;justify-content:center;gap:5px;margin-top:14px;font-size:28px;color:#ffb52e}
+.bars{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+.bar{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;color:var(--ink-soft)}
+.bar .lb{width:74px;flex:none;white-space:nowrap}
+.bar .tr{flex:1;height:18px;background:#eef3fb;border-radius:999px;overflow:hidden}
+.bar .tr i{display:block;height:100%;border-radius:999px;transition:width .7s cubic-bezier(.3,1.2,.5,1)}
+.bar .pc{width:42px;flex:none;text-align:right;font-variant-numeric:tabular-nums}
+.bar .n{width:52px;flex:none;text-align:right;font-size:12px;color:#9aa8c2}
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+.wordchip{
+  border:2px solid var(--line);background:#fff;border-radius:16px;min-width:56px;padding:8px 6px;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:34px;line-height:1.2;font-weight:700;color:#233252;
+  cursor:pointer;text-align:center;box-shadow:0 4px 0 #eef3fc;
+}
+.wordchip:active{transform:translateY(3px);box-shadow:none}
+.cert{border:4px dashed #ffd98a;border-radius:24px;padding:18px;text-align:center;background:linear-gradient(180deg,#fffdf5,#fff8e6)}
+.cert .t{font-size:22px;font-weight:900;color:#c98a12;letter-spacing:3px}
+.cert .n{font-size:30px;font-weight:900;margin:6px 0 2px;color:#2b3a55}
+.cert .d{font-size:13px;color:var(--ink-soft);font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:#fbfdff;border:2px solid var(--line);border-radius:18px;padding:12px;text-align:center}
+.stat .v{font-size:24px;font-weight:900}
+.stat .k{font-size:12px;color:var(--ink-soft);font-weight:800;margin-top:3px}
+table.ref{width:100%;border-collapse:collapse;font-size:13.5px}
+table.ref td{padding:8px 6px;border-bottom:1px dashed var(--line);font-weight:700}
+table.ref td:last-child{text-align:right;color:var(--ink-soft)}
+.histitem{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px dashed var(--line);font-size:14px;font-weight:800}
+.histitem .dt{color:var(--ink-soft);font-size:12.5px;font-weight:700;width:96px;flex:none}
+.histitem .es{color:#2f8fd6;font-size:17px;font-weight:900}
+
+/* ---------- 弹窗 / 彩纸 ---------- */
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+.modal{position:fixed;inset:0;background:rgba(35,50,82,.42);display:none;align-items:center;justify-content:center;padding:18px;z-index:80;backdrop-filter:blur(3px)}
+.modal.show{display:flex}
+.modal .box{background:#fff;border-radius:24px;max-width:560px;width:100%;max-height:82vh;overflow:auto;padding:22px}
+.modal h3{font-size:20px;margin-bottom:12px}
+.modal p,.modal li{font-size:14px;line-height:1.75;color:#41506e;font-weight:600}
+.modal ul{padding-left:20px;margin:8px 0}
+.modal h4{margin:16px 0 6px;font-size:15px;color:var(--ink)}
+.hl{background:#fff6dc;border-radius:6px;padding:0 4px;font-weight:900;color:#a8730a}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="confetti"></canvas>
+
+  <!-- ================= 首页 ================= -->
+  <section id="screen-home" class="screen active">
+    <div class="brand">
+      <h1>识字大冒险</h1>
+      <p>玩个游戏，看看小朋友认识多少字</p>
+    </div>
+
+    <div style="text-align:center;margin:8px 0 0"><div id="homeBubble" class="bubble">嗨，我是熊猫豆豆，一起来闯关吧！</div></div>
+
+    <div class="world" id="homeWorld">
+      <div class="world-bg" id="homeScene"></div>
+      <div class="snowfall" id="homeSnow"></div>
+      <div class="world-tag" id="homeWorldTag">🌸 春天的小花园</div>
+      <div class="world-mascot" id="homeMascot"></div>
+      <div class="world-hint" id="homeTurnHint">点豆豆，他会转身</div>
+    </div>
+
+    <div id="pandaProg"></div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="field">
+        <label>小朋友的名字</label>
+        <input id="inName" type="text" value="跳跳" maxlength="8" placeholder="写个小名就好">
+      </div>
+      <div class="field">
+        <label>几岁啦</label>
+        <select id="inAge">
+          <option>3</option><option>4</option>
+          <option selected>5</option>
+          <option>6</option><option>7</option><option>8</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>选一个玩法</label>
+        <div class="modes">
+          <button class="mode on" data-mode="read">
+            <div class="mt">读一读 <span class="tagline">推荐</span></div>
+            <div class="md">屏幕上出现一个字，小朋友读出来，家长点「认识 / 不认识」。最准的玩法。</div>
+          </button>
+          <button class="mode" data-mode="listen">
+            <div class="mt">找一找</div>
+            <div class="md">手机念一个字，小朋友点出对应的字（4 选 1）。孩子自己就能玩。</div>
+          </button>
+          <button class="mode wide" data-mode="sentence">
+            <div class="mt">读句子 <span class="tagline">最全面</span></div>
+            <div class="md">屏幕上出现一句话，小朋友读出来，家长把没念出来的字点一下。一句能测十来个字，读几十句就能把识字量摸得比较准。</div>
+          </button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:20px">
+        <button class="btn" id="btnStart" style="flex:1">开始闯关 ★</button>
+      </div>
+      <div class="row" style="margin-top:12px;justify-content:center;gap:14px">
+        <button class="btn tiny" id="btnHelp">家长看这里（原理说明）</button>
+        <button class="btn tiny" id="btnHistory">成长记录</button>
+      </div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">读一读 / 找一找约 3~6 分钟 · 读句子约 6~10 分钟 · 全程无倒计时 · 随时可以停</p>
+  </section>
+
+  <!-- ================= 测试页 ================= -->
+  <section id="screen-test" class="screen">
+    <div class="topbar">
+      <div class="chip"><span class="star">★</span><span id="starCount">0</span></div>
+      <div class="chip" id="lvChip">第 1 关</div>
+      <div class="spacer"></div>
+      <button class="btn tiny" id="btnQuit">退出</button>
+    </div>
+    <div class="progress"><i id="progBar"></i></div>
+    <div class="lvrow"><span id="progText">热身中…</span><span id="qText">已做 0 题</span></div>
+
+    <div class="stage" id="stage">
+      <div class="prompt" id="prompt">让小朋友把这个字读出来</div>
+      <div id="questionArea"></div>
+      <div class="feedback"><div class="fb" id="fb"></div></div>
+    </div>
+
+    <div class="parentbar" id="parentBar">
+      <button class="judge yes" id="btnYes">认识 ✓</button>
+      <button class="judge no" id="btnNo">不认识 ✗</button>
+    </div>
+    <div class="sentbar" id="sentBar" style="display:none">
+      <button class="btn ghost" id="btnUnmark">重标</button>
+      <button class="btn" id="btnDone">都会，下一句 ✓</button>
+    </div>
+    <div class="mini" id="miniHint">家长提示：小朋友读对了点左边，读不出来点右边，不要提示哦</div>
+    <div class="mini-panda" id="miniPanda"></div>
+    <div class="snowfall full" id="testSnow"></div>
+  </section>
+
+  <!-- ================= 结果页 ================= -->
+  <section id="screen-result" class="screen">
+    <div class="card hero">
+      <div id="resTitle" style="font-size:18px;font-weight:900;color:var(--ink-soft)">跳跳 的识字量约</div>
+      <div><span class="big" id="resNum">0</span><span class="unit">字</span></div>
+      <div class="rng" id="resRange">合理区间 0 ~ 0 字</div>
+      <div class="starrow" id="resStars"></div>
+      <div class="muted" id="resLevelText" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="font-size:17px;margin-bottom:4px">豆豆长大了多少</h3>
+      <div class="muted" id="resPandaText"></div>
+      <div class="world world-mini" id="resWorld">
+        <div class="world-bg" id="resScene"></div>
+        <div class="snowfall" id="resSnow"></div>
+        <div class="world-tag" id="resWorldTag">🌸 春天的小花园</div>
+        <div class="world-mascot" id="resPanda"></div>
+      </div>
+      <div class="pw" id="resParts"></div>
+      <div class="muted" style="margin-top:14px;margin-bottom:2px" id="resWorldNote">豆豆的小世界</div>
+      <div class="pw four" id="resScenes"></div>
+      <div class="muted" style="margin-top:10px">每认对一些字，豆豆就长出一个新零件、还会搬去新的地方住，成绩会一直存着——下次来玩他还在，而且会更完整。</div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="font-size:17px;margin-bottom:12px">各难度段表现</h3>
+      <div class="bars" id="resBars"></div>
+      <div class="muted" style="margin-top:10px" id="resBarsNote">绿色越长表示这一段的字认识得越多；本次没测到的难度段按"认识率曲线"少量计入，不会直接算成 0。</div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="font-size:17px;margin-bottom:6px">和同龄小朋友比一比</h3>
+      <table class="ref" id="resRef"></table>
+      <div class="muted" style="margin-top:10px">参考区间为常见经验值，仅供家长心里有个大致坐标，不是标准答案。</div>
+    </div>
+
+    <div class="card" style="margin-top:14px" id="reviewCard">
+      <h3 style="font-size:17px">这些字还不认识，点一点听读音</h3>
+      <div class="muted" style="margin-bottom:4px">把没认出来的字变成"新朋友"，下次见到就认识啦。别批评，一起念念就好。</div>
+      <div class="chips" id="resWrong"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="cert">
+        <div class="t">识 字 小 勇 士</div>
+        <div class="n" id="certName">跳跳</div>
+        <div class="d" id="certMeta">5 岁 · 收集到 3 颗难度星</div>
+        <div style="margin-top:10px;font-size:13px;color:#c98a12;font-weight:800">豆豆说：你认识的字比上次又多啦！</div>
+      </div>
+      <div class="row" style="margin-top:14px;gap:10px">
+        <button class="btn warm" id="btnAgain" style="flex:1">再玩一次</button>
+        <button class="btn ghost" id="btnHome2" style="flex:1">回首页</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn tiny" id="btnCopy" style="flex:1">复制成绩发给家人</button>
+        <button class="btn tiny" id="btnHist2" style="flex:1">看成长记录</button>
+      </div>
+      <div class="muted" style="text-align:center;margin-top:10px">想留个纪念？截屏这个页面就是一张奖状。</div>
+    </div>
+    <div class="card" style="margin-top:14px;display:none" id="resChartCard">
+      <h3 style="font-size:17px;margin-bottom:10px">成长曲线</h3>
+      <div id="resChart"></div>
+    </div>
+  </section>
+
+  <!-- ================= 历史页 ================= -->
+  <section id="screen-history" class="screen">
+    <div class="topbar">
+      <h2 style="font-size:22px">成长记录</h2>
+      <div class="spacer"></div>
+      <button class="btn tiny" id="btnBackHome">返回</button>
+    </div>
+    <div class="card">
+      <div id="histChart"></div>
+      <div id="histList" style="margin-top:6px"></div>
+      <div class="muted" id="histEmpty" style="text-align:center;padding:20px 0">还没有记录，先去做一次测试吧。</div>
+      <div class="row" style="margin-top:14px;gap:10px">
+        <button class="btn ghost" id="btnClearHist" style="flex:1">清空记录</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 弹窗 -->
+  <div class="modal" id="modal">
+    <div class="box" id="modalBox"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   SECTION: DATA — 10 个难度段，每段 24 个字，按常见程度／由易到难排列
+   size 为该难度段在常用字总量中占据的字数（用于识字量估算的分层权重）
+   ========================================================================= */
+var LEVELS = [
+  {stars:1, size:100, color:'#5cb8ff', name:'一星 · 小小芽',
+   chars:'一二三四五六七八九十人大小上下口手日月山水火木天子个很得飞回'.split('')},
+  {stars:2, size:150, color:'#4fc3e8', name:'二星 · 小竹笋',
+   chars:'地我你好是不了的在有他们来去说看听走进见到和也就都吧星石书出雨这着她呀啦它可孩'.split('')},
+  {stars:3, size:250, color:'#4fd6a4', name:'三星 · 小树苗',
+   chars:'会能要从只让叫吃想起放学爱笑心头前后里外多少马住写把亮两中开新找用呢吗谁哪太真还再又快耳眼脚站送长点身朋友风生今饭东西朵拉巴春越认识自己洗球过问时没做第方动才加比远土成'.split('')},
+  {stars:4, size:300, color:'#ffc93c', name:'四星 · 小灯笼',
+   chars:'玩唱跳跑喝帮画花草树叶鸟鱼虫车路家门早晚白黑红牛习买给带喜字边田坐条包哇哭丢掉抱脸嘴最慢先怎鼻窗热停怕谢种捉迷觉空肉声音各像高闭睛题伸抓候更老发睡请被数吹往双共浇干样爬变背活'.split('')},
+  {stars:5, size:400, color:'#ffab4c', name:'五星 · 小火箭',
+   chars:'爸妈哥姐弟妹爷桥猫狗兔鸡鸭鹅蛋奶米面菜果汤茶糖甜歌欢穿绿暖座本青刀舞饿喊追藏捡摸腿肚梦香胖累物提采摘旁婆气急礼园尾原颗紧油踩糕泳处装'.split('')},
+  {stars:6, size:500, color:'#ff8f7a', name:'六星 · 小飞船',
+   chars:'猪羊熊虎猴象鹿虾蟹蜜蜂蝶蛙蛇龟燕竹松柳桃桌椅床灯美游秋冷什么等屋乌躲尝夸饱软硬尖圆因然云排队细吐味闻苹梨醒忘滑凉灵粒丛压弯'.split('')},
+  {stars:7, size:600, color:'#f5789b', name:'七星 · 小魔法',
+   chars:'碗筷杯勺锅壶盘盆桶篮伞袋帽袜裤裙鞋剪针线绳锁钥匙冬池塘黄流船彩戴套煮雪清泪影瘦臭突忽罐厉害酱纹丝贝壳钻搬千万腰割挂'.split('')},
+  {stars:8, size:700, color:'#a98bff', name:'八星 · 小旋风',
+   chars:'湖河海岸坡岛林森苗沙泥洞泉浪冰霜雾露虹雷溪苔藤蒲落满野夏阳光'.split('')},
+  {stars:9, size:800, color:'#8b7bff', name:'九星 · 小博士',
+   chars:'蜻蜓蜘蛛蚂蚁蝌蚪蟋蟀蜗蚯蚓蝉蚊蝇蛾蝙蝠鲸鲨珊瑚蚌熟蝴蚕'.split('')},
+  {stars:10, size:1200, color:'#6f7bd4', name:'十星 · 大字王',
+   chars:'翅膀巢穴鳞蹄爪稻穗犁桨帆舵炉灶檐篱筐磨锄镰藕笋芭网织鳍珠笆'.split('')}
+];
+
+var AGE_REF = [
+  ['3 岁',        '100 ~ 300 字'],
+  ['4 岁',        '300 ~ 600 字'],
+  ['5 岁',        '600 ~ 1000 字'],
+  ['6 岁（幼小衔接）','1000 ~ 1600 字'],
+  ['一年级结束',   '1600 字左右'],
+  ['二年级结束',   '2500 字左右'],
+  ['三年级结束',   '3000 字左右']
+];
+
+/* =========================================================================
+   SECTION: SENTENCES — 句子认读题库
+   每个句子都只用上面十档字表里的字（标点不计分），小朋友整句念出来，
+   家长把没念出来的字点一下。一句 5~12 个字，一次就能拿到十几个字的证据，
+   比一次只测一个字快得多。句子里同一个字重复出现只统计一次。
+   ========================================================================= */
+var SENTENCE_TEXT = [
+  '小猫饿了，想吃鱼', '他走出家门，来到河边', '河里有鱼，可是他不会游水',
+  '小狗来了，说，我来帮你', '小狗跳下水，小鱼都跑过来了', '小猫一伸手，就抓到一条鱼',
+  '小猫和小狗一起回家', '小猫说，你是我的好朋友', '下雨了，我不能出去玩',
+  '我坐在门口看雨', '雨点在地上跳舞', '妈妈给我一杯甜牛奶',
+  '我问妈妈，雨什么时候停', '雨停了，太阳出来了', '我出去踩水玩',
+  '今天真开心', '今天是小狗的生日', '小猫送来一条鱼',
+  '小鸡送来两个鸡蛋', '小鸭带来一袋糖', '大家一起唱歌跳舞',
+  '桌上有一个大蛋糕', '蛋糕上有五颗红果子', '小狗说，谢谢你们',
+  '小鸭想下水游泳', '他站在水边，有点怕', '鸡妈妈说，水里很好玩',
+  '小鸭闭上眼睛，跳了下去', '水很暖，小鸭不怕了', '他游得很快',
+  '小鱼在旁边给他加油', '小鸭学会游泳了', '我们玩捉迷藏',
+  '我闭上眼睛，数到十', '他们都藏在哪里呢', '我找到了树后的小猫',
+  '门后面还有一只小狗', '只有小兔没找到', '原来他躲在桌子下面',
+  '大家都笑了', '小兔在田里种菜', '他天天给菜浇水',
+  '菜长高了，叶子上有小虫', '小兔很着急', '小鸟说，我来帮你捉虫',
+  '小虫都被捉走了', '菜长得又大又绿', '小兔请大家来吃菜',
+  '秋天到了，树叶黄了', '小熊要找一个树洞过冬', '他走了一天才找到',
+  '洞里很暖，还有干草', '小熊抱着蜜罐睡了一觉', '冬天到了，雪落满了树林',
+  '小熊在洞里做了一个梦', '春天来了，小熊醒过来', '天上有乌云，要下雨了',
+  '蚂蚁排着队搬东西', '他们走了一条很长的路', '第一只蚂蚁走在最前面',
+  '雨来了，他们都钻进了洞里', '洞里很干，也很暖和', '蚂蚁说，等雨停了再出去',
+  '雨停了，草地更绿了', '我来到海边，海风吹得很凉', '沙上有各种各样的贝壳',
+  '我捡到一个最好看的', '贝壳上有细细的花纹', '我把它放在耳朵旁边',
+  '里面好像有海的声音', '我把贝壳带回了家', '这是大海送我的礼物',
+  '妈妈带我去外婆家', '我们坐车走了很远', '外婆在门口等我们',
+  '她做了一桌好菜', '有鱼，有汤，还有一盘肉', '我吃了两碗饭',
+  '外婆说我长高了', '外婆家的空气真好', '秋天的果园里有好多果子',
+  '苹果红了，梨子也黄了', '我们提着篮子去采果子', '我采到一个最大的苹果',
+  '哥哥在树上摘桃子', '妹妹在树下捡落叶', '大家的篮子都满了',
+  '回家做果酱，真甜', '蜗牛在草叶上慢慢地爬', '乌龟从水里爬上来',
+  '蜗牛说，你走得真快', '乌龟说，我们比一比', '他们一起往前爬',
+  '蝴蝶在旁边看着', '蜗牛爬到了叶子的最高处', '乌龟说，你真厉害',
+  '谁在天上飞，小鸟在天上飞', '什么在水里游，小鱼在水里游', '什么有长鼻子，大象有长鼻子',
+  '谁最爱吃桃子，猴子最爱吃桃子', '什么有翅膀，小鸟和蝴蝶都有翅膀', '谁住在山上，老虎住在山上',
+  '谁的耳朵最长，小兔的耳朵最长', '谁会吐丝，蚕会吐丝', '小狗，你在做什么呀',
+  '我在找我的球', '球在哪里呢', '就在你的身后呀',
+  '我找到了，谢谢你', '我们一起去玩吧', '好呀，我马上就来了',
+  '今天真开心', '蜻蜓和蝴蝶在草上飞', '蜘蛛在屋檐下织网',
+  '蚯蚓在泥土里钻来钻去', '蝌蚪在水里游，变成了青蛙', '蟋蟀在草丛里唱歌，蝉在树上叫',
+  '蜗牛背着壳，慢慢地爬', '蝙蝠白天躲在山洞里睡觉', '鲸鱼和鲨鱼生活在大海里',
+  '牛在田里犁地，蹄子上都是泥', '稻穗熟了，压弯了腰', '爷爷用锄头和镰刀割稻子',
+  '船上有桨、帆和舵', '篱笆上爬满了藤', '竹筐里装着藕和笋',
+  '屋檐下有一个鸟巢', '炉灶上煮着一锅香香的汤', '我在家里看书',
+  '天上有一个太阳', '他有一双手', '十个人上山',
+  '小鸟飞回来了', '大人小孩一起走', '他在地上画太阳',
+  '我和你一起回家', '好大的一只鸟', '他的手上有一个果子',
+  '一二三四五，六七八九十', '天上有日和月', '大人很大，小孩很小',
+  '天大，地也大', '我很好，你也好', '他和她在看书',
+  '天上下的雨很大', '我看你，你看我', '山上有个大树',
+  '天上日月，地上山水', '我在家里看书', '你说我听，我说你听',
+  '我们会数数了', '我的鞋不见了，它在床下面', '妈妈，我的肚子饿了',
+  '小猫在追自己的尾巴', '我闻到了花的香味', '谁把糖放在我的口袋里了',
+  '我数一数，一共有十只小鸟', '天太热了，我想吃冰', '这个苹果又大又圆',
+  '小狗的鼻子最灵', '月亮圆圆的，像一个大盘子', '我把书放回原来的地方',
+  '风一吹，花就动了', '妈妈的头发又黑又长', '爷爷的手很大，我的手很小',
+  '桌上有一碗热汤', '冬天快到了，天越来越冷', '夏天的太阳很亮',
+  '我有一千个问题要问你', '山上的野花开满了', '蝴蝶的翅膀上有花纹',
+  '小蚂蚁在搬一粒米', '树的影子长长的', '我家的门前有一条小河',
+  '他从木桥上走过去', '雨后的天空很清亮', '奶奶给我做了一双新袜子',
+  '河边的石头又圆又滑', '小鱼在水草里躲起来', '我要自己穿鞋和袜子',
+  '这个字我认识了', '小虫在叶子上睡觉', '我在门口等爸爸回家',
+  '妈妈问我今天学了什么', '我们一起数星星', '树叶落在我的头上',
+  '他把手拉得很紧', '锅里的汤很香', '我们坐在草地上看云',
+  '小鸟在巢里睡觉', '海里有鲸鱼和鲨鱼', '田里的稻子熟了',
+  '蜘蛛在屋檐下织网', '蟋蟀躲在草丛的洞里', '蚯蚓和蝌蚪都藏在泥土里',
+  '珊瑚和蚌藏在海沙里', '蝙蝠挂在屋檐的洞穴里', '爷爷用锄头锄地',
+  '船上有桨和帆', '他跑得又快又好', '我先洗手，再吃饭',
+  '小兔子跳得最高'
+];
+/* 字 → 等级 反查表 */
+var LEVEL_OF={};
+LEVELS.forEach(function(l,i){ l.chars.forEach(function(c){ LEVEL_OF[c]=i+1; }); });
+var NOT_SCORED={};
+'，。！？、；：'.split('').forEach(function(c){ NOT_SCORED[c]=1; });
+
+/* 预先把句子拆成字，算好"句内去重后的字"和难度（0.5×最难 + 0.5×平均） */
+var SENTENCES=SENTENCE_TEXT.map(function(t,idx){
+  var uniq=[], lvs=[];
+  for(var i=0;i<t.length;i++){
+    var c=t[i];
+    if(NOT_SCORED[c]) continue;
+    lvs.push(LEVEL_OF[c]||1);
+    if(uniq.indexOf(c)<0) uniq.push(c);
+  }
+  var mx=Math.max.apply(null,lvs), avg=lvs.reduce(function(a,b){return a+b;},0)/lvs.length;
+  return {t:t, uniq:uniq, lvs:lvs, mx:mx, avg:avg, lv:Math.max(1,Math.min(10,Math.round(0.5*mx+0.5*avg)))};
+});
+
+/* 拟合曲线时对"陡峭度"设上下限：太陡或太平都不符合字频规律，加个约束更稳 */
+var FIT_BMIN = 0.4, FIT_BMAX = 3.0;
+
+/* =========================================================================
+   SECTION: ENGINE — 自适应出题 + 识字量估算（纯逻辑，不碰 DOM）
+
+   出题思路：爬梯子 + 回头复核
+     1) 热身 WARM_N 题（一星），先让小朋友进入状态；
+     2) 阶梯：每关打一组 BLOCK 题。一组答对 ≥PASS_NEED 就往上走一关，
+        不足就往下走一关。一上一下（折返）说明"会／不会"的分界正好夹在中间，
+        不会因为某一道题没做出来就草草收场；
+     3) 回头复核：夹住分界以后停下来回头补测——分界那一关和它下面那一关
+        都补到 TOPN 题，分界上面那一关再摸 TOP_ABOVE 题。
+        这样估算依据的是"分界附近的一整批题"，而不是开头那几道。
+   估算：把各段实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合，
+        用曲线补齐没测到的难度段，再 Σ（认识率 × 该段字数）。
+   ========================================================================= */
+/* 出题参数（下面这几个值都是跑蒙特卡洛模拟标定出来的） */
+var WARM_N=3, BLOCK=3, PASS_NEED=2;
+var TOPN=5, TOP_ABOVE=5, TOP_MAX=16, MAX_Q=38;
+/* 实测认识率的权重 = n/(n+BLEND_N)：题越多越信实测，题少就更多听曲线 */
+var BLEND_N=2;
+
+/* 句子认读模式的参数 */
+var SENT_WARM=3;    // 暖场：前几句先挑最浅的句子
+var SENT_MAX=26;    // 最多读多少句（家长随时可以提前结束）
+var SENT_SKIP=0.35; // 已经测过的字，再次出现的价值折扣
+
+function shuffle(a){
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+function clamp(x,a,b){return x<a?a:(x>b?b:x);}
+function wilson(k,n,z){
+  if(!n) return [0,1];
+  var p=k/n, z2=z*z, d=1+z2/n;
+  var c=(p+z2/(2*n))/d;
+  var hw=z*Math.sqrt(p*(1-p)/n+z2/(4*n*n))/d;
+  return [clamp(c-hw,0,1), clamp(c+hw,0,1)];
+}
+function newSession(opt){
+  opt=opt||{};
+  var mode=opt.mode||'read';
+  var pools=LEVELS.map(function(l){return shuffle(l.chars.slice());});
+  var s={
+    name:opt.name||'跳跳', age:opt.age||5, mode:mode,
+    pools:pools, asked:{}, correct:{}, answers:[],
+    phase:'warmup', warmupLeft:WARM_N,
+    curLevel:2, blockAsked:0, blockCorrect:0, lastDir:1, reversals:0, floorFails:0,
+    boundary:0, topupCount:0,
+    q:null, done:false, stars:0, count:0, stopReason:'', shownLevel:0,
+    earned:0, pandaShown:0
+  };
+  if(mode==='sentence'){
+    // 句子模式：不按单字爬梯子，而是每句覆盖一批字
+    s.phase='sentence';
+    s.used={};          // 已经读过的句子下标
+    s.seen={};          // 已经统计过的字
+    s.curSentence=null; // 当前句子对象
+    s.marks={};         // 当前句子被标成"不认识"的字
+    s.sentCount=0;      // 已读句数
+  }
+  return s;
+}
+function pickChar(s,level){
+  var pool=s.pools[level-1];
+  if(pool&&pool.length) return pool.pop();
+  var arr=LEVELS[level-1].chars;
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+function makeQuestion(s,level){
+  var ch=pickChar(s,level);
+  var q={level:level, ch:ch, options:null};
+  if(s.mode==='listen'){
+    var others=[], pool=LEVELS[level-1].chars;
+    while(others.length<3){
+      var c=pool[Math.floor(Math.random()*pool.length)];
+      if(c!==ch && others.indexOf(c)<0) others.push(c);
+    }
+    q.options=shuffle([ch].concat(others));
+    q.answer=ch;
+  }
+  return q;
+}
+/* 某难度段的"去猜测校正"认识率（听音模式已扣掉 25% 猜中率） */
+function rateAt(s,i){
+  var n=s.asked[i]||0; if(!n) return null;
+  var guess=(s.mode==='listen')?0.25:0;
+  return clamp(((s.correct[i]||0)/n-guess)/(1-guess),0,1);
+}
+/* 分界：第一个"认识率低于 50%"的难度段。
+   返回 LEVELS.length+1 表示测过的关全都过关（分界在最高关之上）。 */
+function findBoundary(s){
+  for(var i=1;i<=LEVELS.length;i++){
+    var r=rateAt(s,i);
+    if(r===null) continue;
+    if(r<0.5) return i;
+  }
+  return LEVELS.length+1;
+}
+/* 复核阶段还差哪一关的题：返回关号，都不用补了就返回 0
+   分界很靠前（小朋友认识的字很少）时，上面只摸 3 题，别让他连做一堆超纲字 */
+function topupNext(s){
+  var L=LEVELS.length, b=s.boundary;
+  var above=(b<=2)?3:TOP_ABOVE;
+  if(b<=1){
+    if((s.asked[1]||0)<TOPN) return 1;
+    if((s.asked[2]||0)<TOPN) return 2;
+    if((s.asked[3]||0)<above) return 3;
+    return 0;
+  }
+  if(b>L){
+    if((s.asked[L]||0)<TOPN) return L;
+    if((s.asked[L-1]||0)<TOPN) return L-1;
+    return 0;
+  }
+  if((s.asked[b]||0)<TOPN) return b;                     // 先把分界把关补足
+  if((s.asked[b-1]||0)<TOPN) return b-1;                 // 再把下面稳过的那关补足
+  if(b+1<=L && (s.asked[b+1]||0)<above) return b+1;      // 上面再摸几题，摸摸尾巴
+  if(b-2>=1 && (s.asked[b-2]||0)<3) return b-2;          // 小朋友年龄小，再往下垫一关
+  return 0;
+}
+/* 一组题打完后的判级：过关往上、没过往下（这就是"答错不结束、回头再测"的来源） */
+function stairDecide(s){
+  var c=s.curLevel, pass=(s.blockCorrect>=PASS_NEED);
+  s.blockAsked=0; s.blockCorrect=0;
+  var dir=pass?1:-1;
+  if(dir!==s.lastDir) s.reversals++;      // 折返次数 = 边界已经被夹住几次
+  s.lastDir=dir;
+
+  if(pass){
+    s.floorFails=0;
+    if(c>=LEVELS.length){ s.stopReason='ceiling'; s.done=true; return; }
+    s.curLevel=c+1;
+  }else{
+    if(c<=1){
+      s.curLevel=1;
+      // 连最低关都两个回合没过：确实到底了，别再耗着他
+      s.floorFails=(s.floorFails||0)+1;
+      if(s.floorFails>=2){ s.stopReason='floor'; s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s); return; }
+    }else{
+      s.curLevel=c-1;
+    }
+  }
+  // 已经一上一下折返过、且题量够了 → 分界夹住，转入回头复核
+  if(s.reversals>=2 && s.count>=18 && s.phase==='stair'){
+    s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s);
+  }
+}
+/* =========================================================================
+   句子认读模式：选句 + 结算
+   选句原则——围着"分界"选：优先挑包含最多"还没测过、且难度贴近分界"的字的句子。
+   一次读一句就能拿到十几个字的证据，比一句一题快十几倍。
+   已经测过的字再次出现，价值打折，避免一句话里反复浪费在同一个字上。
+   ========================================================================= */
+function sentTarget(s){
+  if(s.sentCount<SENT_WARM) return 2;             // 暖场：先来几句最浅的
+  var b=findBoundary(s);                          // 分界（第一个不过关的等级）
+  var step=2+Math.floor(s.sentCount/2);           // 台阶：每两句最多往上挪一级
+  return clamp(Math.min(b,step),1,LEVELS.length);
+}
+function pickSentence(s){
+  var target=sentTarget(s);
+  var best=null, bestScore=-1e9;
+  for(var i=0;i<SENTENCES.length;i++){
+    if(s.used[i]) continue;
+    var sen=SENTENCES[i], score=0;
+    for(var k=0;k<sen.uniq.length;k++){
+      var c=sen.uniq[k], L=LEVEL_OF[c]||1;
+      score += s.seen[c] ? SENT_SKIP : Math.max(0, 6-1.6*Math.abs(L-target));
+    }
+    score = score/Math.sqrt(sen.uniq.length) + Math.random()*0.5;
+    if(score>bestScore){ bestScore=score; best=i; }
+  }
+  return (best===null)?null:best;
+}
+function nextSentence(s){
+  if(s.sentCount>=SENT_MAX){ s.stopReason='limit'; s.done=true; return null; }
+  // 连最难的十星字都认下来了，再读下去也没多少新信息，早点收工
+  var top=LEVELS.length;
+  if(s.sentCount>=18 && (s.asked[top]||0)>=5 && (rateAt(s,top)||0)>=0.5){
+    s.stopReason='ceiling'; s.done=true; return null;
+  }
+  var idx=pickSentence(s);
+  if(idx===null){ s.stopReason='covered'; s.done=true; return null; }
+  s.used[idx]=1;
+  s.curSentence=SENTENCES[idx];
+  s.marks={};
+  return {level:s.curSentence.lv, ch:s.curSentence.t, sentence:true, sen:s.curSentence};
+}
+/* 一句读完：谁没认出来，家长就在 marks 里标一下（句内同一个字只算一次） */
+function submitSentence(s,marks){
+  if(!s.curSentence) return null;
+  var sen=s.curSentence, marked=0, known=0, fresh=0;
+  for(var k=0;k<sen.uniq.length;k++){
+    var c=sen.uniq[k];
+    if(s.seen[c]) continue;                       // 这个字之前统计过了，跳过
+    s.seen[c]=1;
+    var L=LEVEL_OF[c]||1;
+    s.asked[L]=(s.asked[L]||0)+1;
+    s.count++; fresh++;
+    if(marks&&marks[c]){ marked++; s.answers.push({level:L, ch:c, correct:false}); }
+    else { known++; s.correct[L]=(s.correct[L]||0)+1; }
+  }
+  s.stars+=known;
+  s.sentCount++;
+  s.curSentence=null; s.marks={};
+  return {marked:marked, known:known, fresh:fresh, sen:sen};
+}
+/* 家长想提前结束：把当前这句也算进去（标了的按不认识算） */
+function sentenceSeenCount(s){ return s.count||0; }
+
+function nextQuestion(s){
+  if(s.done) return null;
+  if(s.mode==='sentence') return nextSentence(s);
+  if(s.count>=MAX_Q){ s.stopReason='limit'; s.done=true; return null; }
+
+  if(s.phase==='warmup'){
+    s.q=makeQuestion(s,1);
+    return s.q;
+  }
+  if(s.phase==='stair'){
+    if(s.blockAsked>=BLOCK) stairDecide(s);
+    if(s.done) return null;
+    if(s.phase==='stair'){
+      if(!s.asked[s.curLevel]){ s.asked[s.curLevel]=0; s.correct[s.curLevel]=0; }
+      s.q=makeQuestion(s,s.curLevel);
+      return s.q;
+    }
+  }
+  if(s.phase==='topup'){
+    if(s.topupCount>=TOP_MAX){ s.stopReason='stable'; s.done=true; return null; }
+    s.boundary=findBoundary(s);
+    var need=topupNext(s);
+    if(!need){ s.stopReason='stable'; s.done=true; return null; }
+    s.topupCount++;
+    if(!s.asked[need]){ s.asked[need]=0; s.correct[need]=0; }
+    s.q=makeQuestion(s,need);
+    return s.q;
+  }
+  s.done=true;
+  return null;
+}
+function answerQuestion(s,correct){
+  if(!s.q) return null;
+  var q=s.q, lv=q.level;
+  s.count++;
+  s.answers.push({level:lv, ch:q.ch, correct:!!correct});
+  s.asked[lv]=(s.asked[lv]||0)+1;
+  if(correct){ s.correct[lv]=(s.correct[lv]||0)+1; s.stars++; }
+
+  if(s.phase==='warmup'){
+    s.warmupLeft--;
+    if(s.warmupLeft<=0){ s.phase='stair'; s.curLevel=2; s.blockAsked=0; s.blockCorrect=0; }
+  }else if(s.phase==='stair'){
+    s.blockAsked++;
+    if(correct) s.blockCorrect++;
+  }
+  s.q=null;
+  return {level:lv, correct:!!correct, ch:q.ch};
+}
+/* 识字量估算：
+   1) 把已测难度段的实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合；
+   2) 用拟合曲线给每一段一个认识率（已测段与实测值混合），未测段取曲线值；
+   3) 识字量 = Σ（每段认识率 × 该段字数）。
+   这样"边界之外"的字不会被打成 0，比单纯逐段相加更接近真实。
+
+   区间的算法（参数自助法）：
+   把每个已测段的实测认识率按它的抽样标准差随机抖一下，重新拟合曲线、重新求和，
+   重复几十次后取 10% 和 90% 分位。好处是自动体现了"曲线是被所有段一起钉住的"
+   这件事——逐段独立相加算出来的区间会宽出两倍多，因为忽略了段与段之间的约束。 */
+var BOOT_N=60, BOOT_SEED_FLOOR=0.08;
+function randn(){ return (Math.random()+Math.random()+Math.random()+Math.random()-2)*1.732; }
+function pointsOf(s){
+  var guess=(s.mode==='listen')?0.25:0;
+  var pts=[];
+  for(var i=1;i<=LEVELS.length;i++){
+    var n=s.asked[i]||0, k=s.correct[i]||0;
+    if(!n) continue;
+    var pr=clamp(k/n,BOOT_SEED_FLOOR,1-BOOT_SEED_FLOOR);
+    pts.push({i:i, n:n, k:k,
+              p:clamp((k/n-guess)/(1-guess),0,1),
+              se:Math.sqrt(pr*(1-pr)/n)/(1-guess)});
+  }
+  return pts;
+}
+function fitPoints(pts, fine){
+  if(!pts.length) return null;
+  var bs = fine?0.05:0.15, is = fine?0.1:0.25;
+  var best=null;
+  for(var b=FIT_BMIN;b<=FIT_BMAX+0.001;b+=bs){
+    for(var i0=0.4;i0<=12.61;i0+=is){
+      var err=0;
+      for(var t=0;t<pts.length;t++){
+        var f=1/(1+Math.exp(b*(pts[t].i-i0))), d=f-pts[t].p;
+        err+=pts[t].n*d*d;
+      }
+      if(best===null||err<best.e) best={e:err,b:b,i0:i0};
+    }
+  }
+  return {b:best.b, i0:best.i0, at:function(i){ return 1/(1+Math.exp(best.b*(i-best.i0))); }};
+}
+function fitCurve(s){ return fitPoints(pointsOf(s), true); }
+/* 给一批（等级, 认识率, 题数）算总识字量 */
+function totalOf(pts, fit){
+  var map={};
+  for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
+  var total=0;
+  for(var m=1;m<=LEVELS.length;m++){
+    var pt=map[m];
+    var mod=fit?fit.at(m):(pt?pt.p:0);
+    var wm=pt?pt.n/(pt.n+BLEND_N):0;
+    total += (pt?(wm*pt.p+(1-wm)*mod):mod)*LEVELS[m-1].size;
+  }
+  return total;
+}
+function bootstrapInterval(pts){
+  if(!pts.length) return [0,0];
+  var totals=[];
+  for(var r=0;r<BOOT_N;r++){
+    var pert=[];
+    for(var t=0;t<pts.length;t++){
+      var p=pts[t];
+      pert.push({i:p.i, n:p.n, p:clamp(p.p+randn()*p.se,0,1)});
+    }
+    totals.push(totalOf(pert, fitPoints(pert,false)));
+  }
+  totals.sort(function(a,b){return a-b;});
+  function q(f){ return totals[clamp(Math.round(f*(BOOT_N-1)),0,BOOT_N-1)]; }
+  return [q(0.10), q(0.90)];
+}
+function computeResult(s){
+  var guess=(s.mode==='listen')?0.25:0;
+  var pts=pointsOf(s);
+  var map={};
+  for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
+  var fit=fitPoints(pts, true);
+  var est=0, levels=[];
+  for(var m=1;m<=LEVELS.length;m++){
+    var size=LEVELS[m-1].size;
+    var pt=map[m];
+    var n=pt?pt.n:0, k=pt?pt.k:0;
+    var mes = pt ? clamp((k/n-guess)/(1-guess),0,1) : null;
+    var mod = fit ? fit.at(m) : (mes===null?0:mes);
+    // 实测题数越多越信实测，题少就更多听曲线的
+    var wm  = n ? n/(n+BLEND_N) : 0;
+    var pc  = n ? (wm*mes + (1-wm)*mod) : mod;
+    est+=pc*size;
+    levels.push({i:m, size:size, stars:LEVELS[m-1].stars, name:LEVELS[m-1].name, color:LEVELS[m-1].color,
+                 asked:n, correct:k, p:n?k/n:0, pc:pc});
+  }
+  // 区间：参数自助法（见上面的说明）
+  var iv=bootstrapInterval(pts);
+  var lo=iv[0], hi=iv[1];
+  // 自助法只反映"抽样带来的抖动"，反映不了"我们选的那条曲线形状本身可能不对"。
+  // 单字玩法一个段只有几题、更依赖外推，这层余量留大一点（数值是跑模拟标定的）。
+  var pad=Math.round(est*((s.mode==='sentence')?0.02:0.06));
+  lo-=pad; hi+=pad;
+  var starLevel=0;
+  for(var q2=0;q2<levels.length;q2++){ if(levels[q2].asked>0 && levels[q2].pc>=0.5) starLevel=levels[q2].i; }
+  var est10=Math.round(est/10)*10;
+  var lo10=Math.round(lo/10)*10, hi10=Math.round(hi/10)*10;
+  // 至少给一点宽度，别让区间看起来像精确值
+  if(hi10<est10+80) hi10=est10+80;
+  if(lo10>est10-80) lo10=Math.max(0,est10-80);
+  var wrong=[];
+  s.answers.forEach(function(a){ if(!a.correct && wrong.indexOf(a.ch)<0) wrong.push(a.ch); });
+  return {
+    est:est10, lo:Math.min(lo10,est10), hi:Math.min(5000,Math.max(hi10,est10)),
+    starLevel:starLevel, levels:levels, wrong:wrong,
+    count:s.count, askedTotal:s.count, correctTotal:s.stars,
+    stopReason:s.stopReason, mode:s.mode, sentCount:s.sentCount||0,
+    distinct:s.count
+  };
+}
+
+/* =========================================================================
+   SECTION: STORAGE
+   ========================================================================= */
+var STORE_KEY='shizi_quest_history_v1';
+function loadHistory(){
+  try{ var v=JSON.parse(localStorage.getItem(STORE_KEY)); return Array.isArray(v)?v:[]; }catch(e){ return []; }
+}
+function saveHistory(list){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(list)); }catch(e){}
+}
+function pushRecord(rec){
+  var list=loadHistory(); list.push(rec);
+  if(list.length>60) list=list.slice(list.length-60);
+  saveHistory(list); return list;
+}
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* =========================================================================
+   SECTION: AUDIO — 全部用 WebAudio 现场合成，不依赖任何外部文件
+   ========================================================================= */
+var actx=null;
+function audioReady(){
+  if(actx) return actx;
+  try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ actx=null; }
+  if(actx&&actx.state==='suspended') actx.resume();
+  return actx;
+}
+function tone(freq,dur,delay,type,gain){
+  var ctx=audioReady(); if(!ctx) return;
+  var t0=ctx.currentTime+(delay||0);
+  var o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(gain||0.16,t0+0.015);
+  g.gain.exponentialRampToValueAtTime(0.0008,t0+(dur||0.15));
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t0); o.stop(t0+(dur||0.15)+0.03);
+}
+function sfxCorrect(){ tone(784,.12,0,'sine',.15); tone(1046,.18,.09,'sine',.13); }
+function sfxWrong(){ tone(330,.14,0,'triangle',.10); tone(247,.2,.11,'triangle',.09); }
+function sfxLevelUp(){ [523,659,784,1046].forEach(function(f,i){ tone(f,.16,i*.085,'sine',.13); }); }
+function sfxFinish(){ [523,659,784,1046,1318,1046,1318].forEach(function(f,i){ tone(f,.2,i*.13,'sine',.13); }); }
+function sfxTap(){ tone(660,.06,0,'square',.05); }
+
+/* 语音朗读 */
+function speak(text,rate){
+  try{
+    if(!('speechSynthesis' in window)) return false;
+    window.speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(text);
+    u.lang='zh-CN'; u.rate=rate||0.85; u.pitch=1.15;
+    var vs=window.speechSynthesis.getVoices()||[];
+    var v=vs.filter(function(x){return /zh[-_]?CN|Chinese|中文|普通话|Ting|Mei|Yue|Sin/i.test((x.lang||'')+(x.name||''));})[0];
+    if(v) u.voice=v;
+    window.speechSynthesis.speak(u);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* 彩纸 */
+var cvs, cctx, parts=[], rafId=null;
+function initConfetti(){
+  cvs=document.getElementById('confetti'); cctx=cvs.getContext('2d');
+  resizeCanvas(); window.addEventListener('resize',resizeCanvas);
+}
+function resizeCanvas(){
+  if(!cvs) return;
+  var dpr=window.devicePixelRatio||1;
+  cvs.width=window.innerWidth*dpr; cvs.height=window.innerHeight*dpr;
+  cvs.style.width=window.innerWidth+'px'; cvs.style.height=window.innerHeight+'px';
+  cctx.setTransform(dpr,0,0,dpr,0,0);
+}
+var CONF_COLORS=['#5cb8ff','#ffc93c','#ff8f7a','#4fd6a4','#a98bff','#ff7ab8'];
+function burst(x,y,n){
+  n=n||26;
+  for(var i=0;i<n;i++){
+    parts.push({
+      x:x, y:y,
+      vx:(Math.random()-0.5)*9, vy:-Math.random()*9-3,
+      s:5+Math.random()*8, c:CONF_COLORS[(Math.random()*CONF_COLORS.length)|0],
+      r:Math.random()*Math.PI, vr:(Math.random()-0.5)*0.3, life:70+Math.random()*35
+    });
+  }
+  if(!rafId) rafId=requestAnimationFrame(drawConfetti);
+}
+function drawConfetti(){
+  cctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+  for(var i=parts.length-1;i>=0;i--){
+    var p=parts[i];
+    p.vy+=0.32; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; p.life--;
+    if(p.life<=0||p.y>window.innerHeight+40){ parts.splice(i,1); continue; }
+    cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.r);
+    cctx.globalAlpha=Math.min(1,p.life/28);
+    cctx.fillStyle=p.c; cctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.62);
+    cctx.restore();
+  }
+  if(parts.length) rafId=requestAnimationFrame(drawConfetti);
+  else { cctx.clearRect(0,0,window.innerWidth,window.innerHeight); rafId=null; }
+}
+
+/* =========================================================================
+   SECTION: UI
+   ========================================================================= */
+/* =========================================================================
+   SECTION: PANDA — 熊猫"豆豆"养成系统
+   跳跳的创意：一开始豆豆只有个头，每认对足够的字就长出一个新零件
+   （身体 → 手 → 脚 → 尾巴 → 衣服 → 帽子 → 眼镜 → 书包 → 皇冠）。
+   累计认对的字数存在本地，跨次保留，所以每次来玩豆豆都会更完整一点。
+   ========================================================================= */
+var PANDA_KEY='shizi_quest_panda_v1';
+
+/* 每个零件的解锁门槛（累计认对的字数）与出场台词 */
+var PANDA_PARTS=[
+  {id:'body',   name:'身体',   emoji:'🧍', at:10,  tip:'豆豆长出身体啦！'},
+  {id:'armL',   name:'左手',   emoji:'🤚', at:24,  tip:'豆豆有左手了，可以抱你一下！'},
+  {id:'armR',   name:'右手',   emoji:'✋', at:40,  tip:'豆豆有两只手啦！'},
+  {id:'legL',   name:'左脚',   emoji:'🦶', at:58,  tip:'豆豆有脚了，能站起来啦！'},
+  {id:'legR',   name:'右脚',   emoji:'🦶', at:78,  tip:'豆豆会走路啦！'},
+  {id:'tail',   name:'小尾巴', emoji:'☁️', at:100, tip:'豆豆长出小尾巴啦！点一下豆豆，转过去看看～'},
+  {id:'shirt',  name:'小衣服', emoji:'👕', at:130, tip:'豆豆穿上新衣服啦！'},
+  {id:'scarf',  name:'围巾',   emoji:'🧣', at:165, tip:'豆豆围上了暖暖的围巾！'},
+  {id:'hat',    name:'小帽子', emoji:'🧢', at:205, tip:'豆豆戴上帽子，好神气！'},
+  {id:'glasses',name:'眼镜',   emoji:'👓', at:250, tip:'豆豆戴上眼镜，像个小博士！'},
+  {id:'bag',    name:'小书包', emoji:'🎒', at:300, tip:'豆豆背上小书包，要去上学啦！'},
+  {id:'crown',  name:'小皇冠', emoji:'👑', at:360, tip:'豆豆戴上皇冠，你就是识字小勇士！'},
+  /* —— 冬天的装备（跳跳的点子：天冷了要有毛线帽、手套、雪地靴） —— */
+  {id:'knitHat',name:'毛线帽', emoji:'🧶', at:400, tip:'豆豆戴上毛线帽，耳朵一下就暖和啦！', winter:1},
+  {id:'mitten', name:'小手套', emoji:'🧤', at:470, tip:'豆豆戴上小手套，手不冷啦！', winter:1},
+  {id:'earmuff',name:'耳罩',   emoji:'🎧', at:540, tip:'豆豆戴上了耳罩，暖烘烘！', winter:1},
+  {id:'boots',  name:'雪地靴', emoji:'🥾', at:610, tip:'豆豆穿上雪地靴，可以去踩雪啦！', winter:1},
+  {id:'coat',   name:'小棉袄', emoji:'🧥', at:690, tip:'豆豆穿上小棉袄，冬天也不怕冷！', winter:1}
+];
+
+function pandaTotal(){
+  try{ var v=parseInt(localStorage.getItem(PANDA_KEY),10); return isNaN(v)?0:Math.max(0,v); }catch(e){ return 0; }
+}
+function pandaSetTotal(n){
+  try{ localStorage.setItem(PANDA_KEY,String(Math.max(0,n|0))); }catch(e){}
+}
+/* 累计认对数 → 已经解锁的零件 id 数组 */
+function pandaUnlocked(total){
+  var out=[];
+  for(var i=0;i<PANDA_PARTS.length;i++){ if(total>=PANDA_PARTS[i].at) out.push(PANDA_PARTS[i].id); }
+  return out;
+}
+/* 下一个还没拿到的零件（全都拿到了返回 null） */
+function pandaNext(total){
+  for(var i=0;i<PANDA_PARTS.length;i++){ if(total<PANDA_PARTS[i].at) return PANDA_PARTS[i]; }
+  return null;
+}
+/* 本次认对了 n 个字：写回累计值，返回这次新长出来的零件列表 */
+function pandaEarn(n){
+  n=n|0;
+  if(n<=0) return [];
+  var before=pandaTotal(), after=before+n;
+  pandaSetTotal(after);
+  var a=pandaUnlocked(before), b=pandaUnlocked(after), fresh=[];
+  for(var i=0;i<b.length;i++){ if(a.indexOf(b[i])<0) fresh.push(b[i]); }
+  return fresh;
+}
+
+function mascotSVG(total, extraClass){
+  var on={}; pandaUnlocked(total||0).forEach(function(id){ on[id]=1; });
+  /* 戴上毛线帽就不戴小帽子了（不然头上太挤） */
+  if(on.knitHat) on.hat=0;
+  var cls='mascot'+(extraClass?(' '+extraClass):'');
+  function g(id, inner){ return '<g class="p-part'+(on[id]?' on':'')+'" data-p="'+id+'">'+inner+'</g>'; }
+  var s='<svg class="'+cls+'" viewBox="0 0 120 160" aria-hidden="true">';
+  /* —— 下层：尾巴、书包、脚 —— */
+  s+=g('tail','<ellipse cx="60" cy="146" rx="8" ry="6" fill="#fff" stroke="#e6ecf8" stroke-width="2.5"/>');
+  s+=g('bag','<rect x="6" y="106" width="26" height="31" rx="8" fill="#ffab4c"/>'
+           +'<path d="M9 117 h20" stroke="#e08f2e" stroke-width="3"/>'
+           +'<circle cx="19" cy="130" r="3.5" fill="#ffe0a8"/>');
+  s+=g('legL','<ellipse cx="42" cy="146" rx="14" ry="9" fill="#3b4258"/>');
+  s+=g('legR','<ellipse cx="78" cy="146" rx="14" ry="9" fill="#3b4258"/>');
+  /* —— 身体 —— */
+  s+=g('body','<ellipse cx="60" cy="120" rx="28" ry="23" fill="#fff" stroke="#e6ecf8" stroke-width="3"/>');
+  s+=g('armL','<ellipse cx="31" cy="121" rx="10" ry="10" fill="#3b4258"/>');
+  s+=g('armR','<ellipse cx="89" cy="121" rx="10" ry="10" fill="#3b4258"/>');
+  s+=g('shirt','<ellipse cx="60" cy="127" rx="28.5" ry="19" fill="#5cb8ff"/>'
+              +'<path d="M34 121 h52" stroke="#4aa3ea" stroke-width="3"/>'
+              +'<circle cx="60" cy="136" r="4" fill="#fff" opacity=".9"/>');
+  /* 小棉袄：比小衣服更厚、带毛领和扣子 */
+  s+=g('coat','<ellipse cx="60" cy="126" rx="30" ry="21.5" fill="#e35d5d"/>'
+             +'<path d="M60 106 v40" stroke="#c74a4a" stroke-width="3" stroke-linecap="round"/>'
+             +'<path d="M38 111 q22 -10 44 0" stroke="#fff7ef" stroke-width="7" fill="none" stroke-linecap="round"/>'
+             +'<circle cx="60" cy="131" r="2.8" fill="#ffe0a8"/><circle cx="60" cy="141" r="2.8" fill="#ffe0a8"/>');
+  /* 雪地靴：套在脚上 */
+  s+=g('boots','<ellipse cx="42" cy="148" rx="16" ry="10" fill="#8a5f3a"/>'
+              +'<ellipse cx="42" cy="152" rx="16" ry="6.5" fill="#6f4a2c"/>'
+              +'<path d="M27 145 q15 -6.5 30 0" stroke="#fdf7ee" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+              +'<ellipse cx="78" cy="148" rx="16" ry="10" fill="#8a5f3a"/>'
+              +'<ellipse cx="78" cy="152" rx="16" ry="6.5" fill="#6f4a2c"/>'
+              +'<path d="M63 145 q15 -6.5 30 0" stroke="#fdf7ee" stroke-width="4.5" fill="none" stroke-linecap="round"/>');
+  /* 小手套：套在手上 */
+  s+=g('mitten','<circle cx="31" cy="122" r="12.5" fill="#8f7bff"/>'
+               +'<ellipse cx="20" cy="127" rx="6.5" ry="4.5" fill="#8f7bff"/>'
+               +'<rect x="23.5" y="111" width="15" height="6" rx="3" fill="#f2efff"/>'
+               +'<circle cx="89" cy="122" r="12.5" fill="#8f7bff"/>'
+               +'<ellipse cx="100" cy="127" rx="6.5" ry="4.5" fill="#8f7bff"/>'
+               +'<rect x="81.5" y="111" width="15" height="6" rx="3" fill="#f2efff"/>');
+  /* —— 头（一直都在） —— */
+  s+='<g class="m-head">'
+   +'  <ellipse cx="36" cy="38" rx="13" ry="13" fill="#3b4258"/>'
+   +'  <ellipse cx="84" cy="38" rx="13" ry="13" fill="#3b4258"/>'
+   +'  <ellipse cx="36" cy="38" rx="6" ry="6" fill="#6d7590"/>'
+   +'  <ellipse cx="84" cy="38" rx="6" ry="6" fill="#6d7590"/>'
+   +'  <circle cx="60" cy="70" r="38" fill="#ffffff" stroke="#e6ecf8" stroke-width="3"/>'
+   +'  <g class="m-eye-open">'
+   +'    <ellipse cx="45" cy="66" rx="8.5" ry="10.5" fill="#3b4258"/>'
+   +'    <ellipse cx="75" cy="66" rx="8.5" ry="10.5" fill="#3b4258"/>'
+   +'    <circle cx="48" cy="62" r="3.2" fill="#fff"/><circle cx="78" cy="62" r="3.2" fill="#fff"/>'
+   +'  </g>'
+   +'  <g class="m-eye-happy">'
+   +'    <path d="M37 69 q8 -12 16 0" stroke="#3b4258" stroke-width="5" fill="none" stroke-linecap="round"/>'
+   +'    <path d="M67 69 q8 -12 16 0" stroke="#3b4258" stroke-width="5" fill="none" stroke-linecap="round"/>'
+   +'  </g>'
+   +'  <ellipse cx="33" cy="82" rx="8.5" ry="6" fill="#ffb3c1" opacity=".85"/>'
+   +'  <ellipse cx="87" cy="82" rx="8.5" ry="6" fill="#ffb3c1" opacity=".85"/>'
+   +'  <path class="m-mouth-normal" d="M53 85 q7 8 14 0" stroke="#3b4258" stroke-width="4" fill="none" stroke-linecap="round"/>'
+   +'  <path class="m-mouth-happy" d="M51 82 a9 10 0 0 0 18 0 z" fill="#3b4258"/>'
+   +'</g>';
+  /* —— 上层：穿戴 —— */
+  s+=g('scarf','<rect x="35" y="100" width="50" height="13" rx="6.5" fill="#ff8f7a"/>'
+              +'<rect x="41" y="109" width="13" height="23" rx="6" fill="#ff8f7a"/>');
+  /* 毛毛线帽：比小帽子更鼓，帽顶还有一颗绒球 */
+  s+=g('knitHat','<path d="M27 47 a33 33 0 0 1 66 0 z" fill="#e35d5d"/>'
+                +'<rect x="24" y="41" width="72" height="13" rx="6.5" fill="#c74a4a"/>'
+                +'<path d="M46 22 v18 M60 15 v25 M74 22 v18" stroke="#c74a4a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".5"/>'
+                +'<circle cx="60" cy="13" r="9.5" fill="#fff3f3" stroke="#f0d8d8" stroke-width="2"/>');
+  s+=g('hat','<path d="M34 36 a26 26 0 0 1 52 0 z" fill="#4fd6a4"/>'
+            +'<ellipse cx="60" cy="36" rx="32" ry="7" fill="#3cbf8e"/>');
+  /* 耳罩：箍在帽子外面 */
+  s+=g('earmuff','<path d="M24 46 a36 36 0 0 1 72 0" stroke="#7f6bff" stroke-width="6" fill="none" stroke-linecap="round"/>'
+                +'<circle cx="23" cy="52" r="12" fill="#8f7bff"/><circle cx="23" cy="52" r="5.5" fill="#c9beff"/>'
+                +'<circle cx="97" cy="52" r="12" fill="#8f7bff"/><circle cx="97" cy="52" r="5.5" fill="#c9beff"/>');
+  s+=g('glasses','<circle cx="45" cy="66" r="13" fill="none" stroke="#3b4258" stroke-width="4"/>'
+                +'<circle cx="75" cy="66" r="13" fill="none" stroke="#3b4258" stroke-width="4"/>'
+                +'<path d="M58 66 h4" stroke="#3b4258" stroke-width="4"/>');
+  s+=g('crown','<path d="M40 17 L47 4 L54 12 L60 2 L66 12 L73 4 L80 17 Z" fill="#ffd15c"'
+              +' stroke="#e8a900" stroke-width="2" stroke-linejoin="round"/>');
+  s+='</svg>';
+  return s;
+}
+/* 把豆豆画进某个容器 */
+function renderMascot(el, total){
+  if(!el) return;
+  if(total===undefined) total=pandaTotal();
+  el.innerHTML = (mascotFacing==='back') ? mascotBackSVG(total) : mascotSVG(total);
+}
+/* —— 转过身的豆豆：后脑勺 + 书包 + 小尾巴 —— */
+var mascotFacing='front';
+function mascotBackSVG(total, extraClass){
+  var on={}; pandaUnlocked(total||0).forEach(function(id){ on[id]=1; });
+  if(on.knitHat) on.hat=0;
+  var cls='mascot'+(extraClass?(' '+extraClass):'');
+  function g(id, inner){ return '<g class="p-part'+(on[id]?' on':'')+'" data-p="'+id+'">'+inner+'</g>'; }
+  var s='<svg class="'+cls+'" viewBox="0 0 120 160" aria-hidden="true">';
+  /* 脚 */
+  s+=g('legL','<ellipse cx="42" cy="146" rx="14" ry="9" fill="#3b4258"/>');
+  s+=g('legR','<ellipse cx="78" cy="146" rx="14" ry="9" fill="#3b4258"/>');
+  /* 身体背面：露出一条黑肩带 */
+  s+=g('body','<ellipse cx="60" cy="120" rx="28" ry="23" fill="#fff" stroke="#e6ecf8" stroke-width="3"/>'
+             +'<path d="M29 106 q31 13 62 0" stroke="#3b4258" stroke-width="11" fill="none" stroke-linecap="round" opacity=".92"/>');
+  /* 手背 */
+  s+=g('armL','<ellipse cx="31" cy="121" rx="10" ry="10" fill="#3b4258"/>');
+  s+=g('armR','<ellipse cx="89" cy="121" rx="10" ry="10" fill="#3b4258"/>');
+  /* 衣服背面 */
+  s+=g('shirt','<ellipse cx="60" cy="127" rx="28.5" ry="19" fill="#5cb8ff"/>'
+              +'<path d="M42 113 q18 7 36 0" stroke="#4aa3ea" stroke-width="3" fill="none"/>');
+  s+=g('coat','<ellipse cx="60" cy="126" rx="30" ry="21.5" fill="#e35d5d"/>'
+             +'<path d="M38 111 q22 -10 44 0" stroke="#fff7ef" stroke-width="7" fill="none" stroke-linecap="round"/>');
+  /* 小尾巴——转到背面才看得见！ */
+  s+=g('tail','<ellipse cx="60" cy="142" rx="14" ry="10.5" fill="#ffffff" stroke="#6b7a99" stroke-width="3"/>'
+             +'<ellipse cx="55" cy="138" rx="4.2" ry="3" fill="#eef4fd"/>');
+  /* 书包：背在背上，从背面看最完整 */
+  s+=g('bag','<rect x="38" y="96" width="44" height="30" rx="10" fill="#ffab4c"/>'
+            +'<rect x="38" y="106" width="44" height="6.5" fill="#e08f2e"/>'
+            +'<rect x="52" y="116" width="16" height="8" rx="3.5" fill="#ffe0a8"/>'
+            +'<path d="M47 96 q-7 -14 9 -14 M73 96 q7 -14 -9 -14" stroke="#e08f2e" stroke-width="5" fill="none" stroke-linecap="round"/>');
+  /* 小手套 */
+  s+=g('mitten','<circle cx="31" cy="122" r="12.5" fill="#8f7bff"/>'
+               +'<ellipse cx="20" cy="127" rx="6.5" ry="4.5" fill="#8f7bff"/>'
+               +'<rect x="23.5" y="111" width="15" height="6" rx="3" fill="#f2efff"/>'
+               +'<circle cx="89" cy="122" r="12.5" fill="#8f7bff"/>'
+               +'<ellipse cx="100" cy="127" rx="6.5" ry="4.5" fill="#8f7bff"/>'
+               +'<rect x="81.5" y="111" width="15" height="6" rx="3" fill="#f2efff"/>');
+  /* 雪地靴 */
+  s+=g('boots','<ellipse cx="42" cy="148" rx="16" ry="10" fill="#8a5f3a"/>'
+              +'<ellipse cx="42" cy="152" rx="16" ry="6.5" fill="#6f4a2c"/>'
+              +'<path d="M27 145 q15 -6.5 30 0" stroke="#fdf7ee" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+              +'<ellipse cx="78" cy="148" rx="16" ry="10" fill="#8a5f3a"/>'
+              +'<ellipse cx="78" cy="152" rx="16" ry="6.5" fill="#6f4a2c"/>'
+              +'<path d="M63 145 q15 -6.5 30 0" stroke="#fdf7ee" stroke-width="4.5" fill="none" stroke-linecap="round"/>');
+  /* 后脑勺：一撮呆毛，没有脸 */
+  s+='<g class="m-head">'
+   +'  <ellipse cx="36" cy="38" rx="13" ry="13" fill="#3b4258"/>'
+   +'  <ellipse cx="84" cy="38" rx="13" ry="13" fill="#3b4258"/>'
+   +'  <circle cx="60" cy="70" r="38" fill="#ffffff" stroke="#e6ecf8" stroke-width="3"/>'
+   +'  <path d="M59 33 q-4 -11 7 -13" stroke="#3b4258" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+   +'</g>';
+  /* 围巾背面就是一整圈 */
+  s+=g('scarf','<rect x="34" y="100" width="52" height="14" rx="7" fill="#ff8f7a"/>');
+  s+=g('knitHat','<path d="M27 47 a33 33 0 0 1 66 0 z" fill="#e35d5d"/>'
+                +'<rect x="24" y="41" width="72" height="13" rx="6.5" fill="#c74a4a"/>'
+                +'<path d="M46 22 v18 M60 15 v25 M74 22 v18" stroke="#c74a4a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".5"/>'
+                +'<circle cx="60" cy="13" r="9.5" fill="#fff3f3" stroke="#f0d8d8" stroke-width="2"/>');
+  s+=g('hat','<path d="M34 36 a26 26 0 0 1 52 0 z" fill="#4fd6a4"/>'
+            +'<path d="M60 36 v-19" stroke="#3cbf8e" stroke-width="3"/>');
+  s+=g('earmuff','<path d="M24 46 a36 36 0 0 1 72 0" stroke="#7f6bff" stroke-width="6" fill="none" stroke-linecap="round"/>'
+                +'<circle cx="23" cy="52" r="12" fill="#8f7bff"/><circle cx="23" cy="52" r="5.5" fill="#c9beff"/>'
+                +'<circle cx="97" cy="52" r="12" fill="#8f7bff"/><circle cx="97" cy="52" r="5.5" fill="#c9beff"/>');
+  s+=g('crown','<path d="M40 17 L47 4 L54 12 L60 2 L66 12 L73 4 L80 17 Z" fill="#ffd15c"'
+              +' stroke="#e8a900" stroke-width="2" stroke-linejoin="round"/>');
+  s+='</svg>';
+  return s;
+}
+/* 点一下豆豆：转身 → 看见小尾巴；再点一下转回来 */
+var turningMascot=false;
+function turnMascot(){
+  if(turningMascot) return;
+  turningMascot=true;
+  sfxTap();
+  var host=$('homeMascot');
+  mascotFacing=(mascotFacing==='front')?'back':'front';
+  var names=[];
+  if(host){
+    host.style.animation='mascotFlipOut .17s ease-in forwards';
+    names.push(host);
+  }
+  setTimeout(function(){
+    renderMascot($('homeMascot'));
+    renderMascot($('resPanda'));
+    updateTurnHint();
+    for(var i=0;i<names.length;i++) names[i].style.animation='mascotFlipIn .3s cubic-bezier(.3,1.5,.5,1)';
+    setTimeout(function(){
+      for(var j=0;j<names.length;j++) names[j].style.animation='';
+      turningMascot=false;
+    },320);
+  },180);
+}
+function updateTurnHint(){
+  var el=$('homeTurnHint'); if(!el) return;
+  el.textContent = (mascotFacing==='back') ? '点豆豆，转回正面' : '点豆豆，他会转身';
+}
+/* 首页：进度条 + 零件小图标墙 */
+function renderPandaProgress(){
+  var el=$('pandaProg'); if(!el) return;
+  var total=pandaTotal(), un=pandaUnlocked(total), next=pandaNext(total), h='';
+  if(next){
+    var prev=0;
+    for(var i=0;i<PANDA_PARTS.length;i++){ if(PANDA_PARTS[i].at<=total) prev=PANDA_PARTS[i].at; }
+    var pct=Math.max(4,Math.min(100,Math.round((total-prev)/(next.at-prev)*100)));
+    h+='<div class="pp-bar"><i style="width:'+pct+'%"></i></div>';
+    h+='<div class="pp-text">再认识 <b>'+(next.at-total)+'</b> 个字，豆豆就能长出「'+next.name+'」</div>';
+  }else{
+    h+='<div class="pp-text">豆豆的零件全都长齐啦，真了不起！</div>';
+  }
+  h+='<div class="pp-chips">'+PANDA_PARTS.map(function(p){
+      return '<span class="pp-chip'+(un.indexOf(p.id)>=0?' on':'')+'" title="'+p.name+'">'+p.emoji+'</span>';
+    }).join('')+'</div>';
+  /* 豆豆住的地方 */
+  var cur=sceneCur(total), sn=sceneNext(total);
+  h+='<div class="pp-world">'+cur.emoji+' '+cur.name
+    +(sn?('　·　再认 <b>'+(sn.at-total)+'</b> 个字，豆豆就搬去「'+sn.name+'」'):'　·　这是豆豆最喜欢的地方啦')+'</div>';
+  el.innerHTML=h;
+}
+/* 每次回到首页都把豆豆、场景和进度刷成最新 */
+function refreshPanda(){
+  renderMascot($('homeMascot'));
+  renderPandaProgress();
+  var mm=$('miniPanda');
+  if(mm) mm.innerHTML=mascotSVG(livePandaTotal(session));
+  refreshWorld();
+}
+
+/* —— 测试进行中：把"这次已经认对的字数"先算进去，豆豆当场就长大 —— */
+function livePandaTotal(s){
+  return pandaTotal() + (s ? (s.earned||0) : 0);
+}
+/* 重画小豆豆；返回这一次刚解锁的零件（没有就返回 null） */
+function livePandaRefresh(s, quiet){
+  var total=livePandaTotal(s), el=$('miniPanda');
+  if(el) el.innerHTML=mascotSVG(total);
+  liveWorldRefresh(s);
+  var n=pandaUnlocked(total).length, shown=(s&&s.pandaShown)||0;
+  if(s) s.pandaShown=Math.max(shown,n);
+  if(!quiet && n>shown) return pandaUnlocked(total).slice(shown);
+  return null;
+}
+/* 提示条排队：一次同时解锁零件和场景时，一条一条飘，不会叠在一起 */
+var toastQ=[], toastBusy=false;
+function pushToast(emoji, text, color){
+  toastQ.push({e:emoji,t:text,c:color||'#ffd15c'});
+  drainToast();
+}
+function drainToast(){
+  if(toastBusy||!toastQ.length) return;
+  var it=toastQ.shift(); toastBusy=true;
+  sfxLevelUp();
+  var t=document.createElement('div');
+  t.className='panda-toast';
+  t.style.borderColor=it.c;
+  t.innerHTML='<div class="pt-e">'+it.e+'</div><div>'+it.t+'</div>';
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ t.classList.add('on'); });
+  setTimeout(function(){ t.classList.remove('on'); }, 1800);
+  setTimeout(function(){
+    if(t.parentNode) t.parentNode.removeChild(t);
+    toastBusy=false; drainToast();
+  }, 2150);
+}
+
+/* 新零件出场：音效 + 飘一条提示 + 小豆豆抖一下 */
+function showPandaGrow(ids){
+  if(!ids||!ids.length) return;
+  var el=$('miniPanda');
+  if(el){
+    var ms=el.querySelector('.mascot');
+    if(ms){ ms.classList.remove('pop'); void ms.offsetWidth; ms.classList.add('pop'); }
+    for(var k=0;k<ids.length;k++){
+      (function(id){
+        var gg=el.querySelector('.p-part[data-p="'+id+'"]');
+        if(!gg) return;
+        gg.classList.add('just');
+        setTimeout(function(){ gg.classList.remove('just'); },950);
+      })(ids[k]);
+    }
+  }
+  /* 一次跨过好几个门槛时，只报最新的那一个 */
+  var last=ids[ids.length-1], part=null;
+  for(var i=0;i<PANDA_PARTS.length;i++){ if(PANDA_PARTS[i].id===last) part=PANDA_PARTS[i]; }
+  if(part) pushToast(part.emoji, part.tip);
+}
+
+/* =========================================================================
+   SECTION: WORLD — 豆豆的小世界（四季场景）
+   跳跳的点子：认的字越多，豆豆住的地方越热闹，最厉害的能住进"冰天雪地"。
+   ========================================================================= */
+var SCENE_KEY='shizi_quest_world_v1';
+var SCENES=[
+  {id:'spring', name:'春天的小花园',   short:'春 · 花园', emoji:'🌸', at:0,   color:'#ffd15c',
+   tip:'豆豆住在春天的小花园里，遍地是小花 🌸'},
+  {id:'summer', name:'夏天的海边',     short:'夏 · 海边', emoji:'🏖️', at:150, color:'#5cb8ff',
+   tip:'豆豆搬去夏天的海边住啦，能听见海浪声 🏖️'},
+  {id:'autumn', name:'秋天的田野',     short:'秋 · 田野', emoji:'🍂', at:320, color:'#ff9f43',
+   tip:'豆豆走进秋天的田野，落叶飘啊飘 🍂'},
+  {id:'winter', name:'冬天的冰天雪地', short:'冬 · 雪地', emoji:'❄️', at:450, color:'#7fc4ff',
+   tip:'下雪啦！豆豆搬进了冰天雪地，快看窗外 ❄️'}
+];
+function sceneSeen(){ try{ var v=parseInt(localStorage.getItem(SCENE_KEY),10); return isNaN(v)?0:Math.max(0,v); }catch(e){ return 0; } }
+function sceneSetSeen(n){ try{ localStorage.setItem(SCENE_KEY,String(Math.max(0,n|0))); }catch(e){} }
+function sceneUnlocked(total){
+  var out=[];
+  for(var i=0;i<SCENES.length;i++){ if(total>=SCENES[i].at) out.push(SCENES[i]); }
+  return out.length?out:[SCENES[0]];
+}
+function sceneCur(total){ var u=sceneUnlocked(total); return u[u.length-1]; }
+function sceneNext(total){
+  for(var i=0;i<SCENES.length;i++){ if(total<SCENES[i].at) return SCENES[i]; }
+  return null;
+}
+
+/* —— 四季场景的背景画（viewBox 400x260，豆豆站在 y≈210 的地面上） —— */
+function wFlower(x,y,c){
+  return '<g><path d="M'+x+' '+(y+7)+' v-9" stroke="#5aa84a" stroke-width="2.4" stroke-linecap="round"/>'
+    +'<circle cx="'+(x-4.4)+'" cy="'+(y+1)+'" r="3.2" fill="'+c+'"/>'
+    +'<circle cx="'+(x+4.4)+'" cy="'+(y+1)+'" r="3.2" fill="'+c+'"/>'
+    +'<circle cx="'+x+'" cy="'+(y-3.6)+'" r="3.2" fill="'+c+'"/>'
+    +'<circle cx="'+x+'" cy="'+(y+1)+'" r="2.3" fill="#fff7cc"/></g>';
+}
+function sceneSpring(u){
+  return '<defs><linearGradient id="sky'+u+'" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#bde6ff"/><stop offset="1" stop-color="#f3fbff"/></linearGradient></defs>'
+   +'<rect width="400" height="260" fill="url(#sky'+u+')"/>'
+   +'<circle cx="330" cy="50" r="34" fill="#ffe9a8" opacity=".55"/><circle cx="330" cy="50" r="22" fill="#ffd15c"/>'
+   +'<g fill="#ffffff" opacity=".95">'
+   +'<ellipse cx="88" cy="58" rx="30" ry="17"/><ellipse cx="112" cy="50" rx="21" ry="14"/><ellipse cx="66" cy="52" rx="19" ry="12"/>'
+   +'<ellipse cx="248" cy="34" rx="24" ry="13"/><ellipse cx="268" cy="30" rx="16" ry="10"/></g>'
+   +'<path d="M0 178 q60 -52 118 -8 q50 36 92 -6 q56 -52 120 6 q40 32 70 8 v60 H0 z" fill="#cdeec4"/>'
+   +'<path d="M0 206 q90 -12 196 -4 q112 8 204 -3 v62 H0 z" fill="#a6e28c"/>'
+   +'<path d="M0 226 q100 -10 200 -3 q108 7 200 -3 v42 H0 z" fill="#8ed674"/>'
+   +'<g><rect x="46" y="150" width="9" height="44" rx="4" fill="#b98a5a"/>'
+   +'<circle cx="50" cy="146" r="27" fill="#6fcf7a"/><circle cx="32" cy="158" r="18" fill="#84d98d"/><circle cx="68" cy="158" r="18" fill="#84d98d"/></g>'
+   +'<g><rect x="348" y="162" width="8" height="34" rx="4" fill="#b98a5a"/>'
+   +'<circle cx="352" cy="158" r="21" fill="#6fcf7a"/><circle cx="336" cy="168" r="14" fill="#84d98d"/><circle cx="368" cy="168" r="14" fill="#84d98d"/></g>'
+   +wFlower(126,218,'#ff9fc4')+wFlower(146,226,'#ffd15c')+wFlower(106,230,'#a98bff')
+   +wFlower(252,222,'#ff9fc4')+wFlower(272,230,'#a98bff')
+   +'<g fill="#ffb0c8"><ellipse cx="104" cy="66" rx="9" ry="6" transform="rotate(-20 104 66)"/>'
+   +'<ellipse cx="304" cy="92" rx="8" ry="5.5" transform="rotate(18 304 92)"/></g>';
+}
+function sceneSummer(u){
+  return '<defs><linearGradient id="sky'+u+'" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#9fdcff"/><stop offset="1" stop-color="#eaf9ff"/></linearGradient></defs>'
+   +'<rect width="400" height="260" fill="url(#sky'+u+')"/>'
+   +'<circle cx="326" cy="46" r="42" fill="#ffe9a8" opacity=".5"/><circle cx="326" cy="46" r="25" fill="#ffd15c"/>'
+   +'<g fill="#ffffff" opacity=".92"><ellipse cx="96" cy="46" rx="28" ry="15"/><ellipse cx="120" cy="40" rx="19" ry="12"/></g>'
+   +'<g stroke="#7f9ec4" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7">'
+   +'<path d="M188 52 q7 -7 14 0 q7 7 14 0"/><path d="M232 36 q6 -6 12 0 q6 6 12 0"/></g>'
+   +'<rect x="0" y="152" width="400" height="64" fill="#5cc4f6"/>'
+   +'<rect x="0" y="152" width="400" height="9" fill="#93dbff" opacity=".85"/>'
+   +'<g stroke="#ffffff" stroke-width="3" fill="none" opacity=".6" stroke-linecap="round">'
+   +'<path d="M18 172 q12 -7 24 0"/><path d="M58 190 q12 -7 24 0"/><path d="M296 176 q12 -7 24 0"/>'
+   +'<path d="M338 194 q12 -7 24 0"/><path d="M150 198 q12 -7 24 0"/></g>'
+   +'<path d="M0 210 q100 -16 200 -10 q110 6 200 -8 v68 H0 z" fill="#ffe3a8"/>'
+   +'<path d="M0 234 q120 -14 220 -8 q100 6 180 -8 v42 H0 z" fill="#ffd488"/>'
+   +'<g><path d="M60 210 q-9 -42 2 -64" stroke="#b98a5a" stroke-width="9" fill="none" stroke-linecap="round"/>'
+   +'<g fill="#5dbf6f"><ellipse cx="38" cy="146" rx="25" ry="9" transform="rotate(-18 38 146)"/>'
+   +'<ellipse cx="84" cy="146" rx="25" ry="9" transform="rotate(18 84 146)"/>'
+   +'<ellipse cx="61" cy="132" rx="10" ry="22"/></g>'
+   +'<circle cx="50" cy="142" r="4" fill="#c98a3c"/><circle cx="72" cy="142" r="4" fill="#c98a3c"/></g>'
+   +'<circle cx="330" cy="232" r="8" fill="#ffb3a0"/><circle cx="356" cy="244" r="5.5" fill="#ffd6a0"/>'
+   +'<circle cx="130" cy="240" r="6" fill="#ffd6a0"/>';
+}
+function sceneAutumn(u){
+  return '<defs><linearGradient id="sky'+u+'" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#ffd9a8"/><stop offset="1" stop-color="#fff6e6"/></linearGradient></defs>'
+   +'<rect width="400" height="260" fill="url(#sky'+u+')"/>'
+   +'<circle cx="318" cy="54" r="40" fill="#ffcf8a" opacity=".55"/><circle cx="318" cy="54" r="23" fill="#ffb44a"/>'
+   +'<path d="M0 178 q62 -50 120 -6 q50 36 92 -8 q58 -52 122 8 q36 30 66 6 v62 H0 z" fill="#e8b96a"/>'
+   +'<path d="M0 206 q92 -12 198 -4 q112 8 202 -3 v62 H0 z" fill="#e0a94f"/>'
+   +'<path d="M0 228 q100 -10 200 -3 q108 7 200 -3 v40 H0 z" fill="#d69a41"/>'
+   +'<g><rect x="46" y="152" width="9" height="44" rx="4" fill="#9c6b3d"/>'
+   +'<circle cx="50" cy="146" r="28" fill="#e8722f"/><circle cx="30" cy="158" r="18" fill="#f0923c"/><circle cx="70" cy="158" r="18" fill="#f0a94a"/></g>'
+   +'<g stroke="#c98f38" stroke-width="3" fill="none" stroke-linecap="round">'
+   +'<path d="M300 216 v-18"/><path d="M318 222 v-18"/><path d="M336 218 v-18"/><path d="M354 224 v-18"/></g>'
+   +'<g fill="#f4c76a"><ellipse cx="300" cy="195" rx="5" ry="9"/><ellipse cx="318" cy="201" rx="5" ry="9"/>'
+   +'<ellipse cx="336" cy="197" rx="5" ry="9"/><ellipse cx="354" cy="203" rx="5" ry="9"/></g>'
+   +'<g fill="#e8722f" opacity=".92">'
+   +'<ellipse cx="112" cy="86" rx="7.5" ry="4.5" transform="rotate(24 112 86)"/>'
+   +'<ellipse cx="262" cy="66" rx="6.5" ry="4" transform="rotate(-30 262 66)"/>'
+   +'<ellipse cx="176" cy="122" rx="6.5" ry="4" transform="rotate(50 176 122)"/>'
+   +'<ellipse cx="240" cy="150" rx="6.5" ry="4" transform="rotate(-14 240 150)"/></g>';
+}
+function sceneWinter(u){
+  return '<defs><linearGradient id="sky'+u+'" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#5474b8"/><stop offset=".55" stop-color="#9dc2ea"/><stop offset="1" stop-color="#e8f4ff"/></linearGradient></defs>'
+   +'<rect width="400" height="260" fill="url(#sky'+u+')"/>'
+   +'<g fill="#ffffff" opacity=".85"><circle cx="58" cy="34" r="2"/><circle cx="122" cy="22" r="1.6"/>'
+   +'<circle cx="196" cy="42" r="2"/><circle cx="256" cy="20" r="1.5"/><circle cx="366" cy="30" r="1.8"/>'
+   +'<circle cx="88" cy="70" r="1.5"/><circle cx="286" cy="66" r="1.5"/></g>'
+   +'<circle cx="322" cy="50" r="34" fill="#eaf4ff" opacity=".32"/><circle cx="322" cy="50" r="21" fill="#fdfeff"/>'
+   +'<circle cx="313" cy="44" r="4" fill="#e9f1fb"/><circle cx="330" cy="58" r="3" fill="#e9f1fb"/>'
+   +'<path d="M-10 198 L70 96 L128 168 L188 92 L262 190 L322 132 L410 198 v62 H-10 z" fill="#c9ddf2"/>'
+   +'<path d="M70 96 L96 130 L82 126 L60 142 L44 130 Z" fill="#f4faff"/>'
+   +'<path d="M188 92 L214 132 L198 128 L176 144 L158 128 Z" fill="#f4faff"/>'
+   +'<path d="M322 132 L344 160 L330 156 L310 168 L296 156 Z" fill="#f4faff"/>'
+   +'<path d="M0 202 q96 -14 200 -6 q110 9 200 -6 v70 H0 z" fill="#f8fcff"/>'
+   +'<path d="M0 228 q100 -10 200 -4 q108 7 200 -4 v40 H0 z" fill="#e4f0fb"/>'
+   +'<g><rect x="36" y="176" width="8" height="26" rx="3" fill="#7a5a3a"/>'
+   +'<path d="M40 116 L64 156 H16 Z" fill="#2f7d5e"/><path d="M40 146 L66 184 H14 Z" fill="#35886a"/>'
+   +'<path d="M40 116 L52 137 H28 Z" fill="#eaf6ff"/><path d="M40 146 L54 168 H26 Z" fill="#eaf6ff" opacity=".85"/></g>'
+   +'<g><rect x="354" y="182" width="7" height="22" rx="3" fill="#7a5a3a"/>'
+   +'<path d="M357 132 L377 166 H337 Z" fill="#2f7d5e"/><path d="M357 156 L379 188 H335 Z" fill="#35886a"/>'
+   +'<path d="M357 132 L367 148 H347 Z" fill="#eaf6ff"/></g>'
+   +'<g><ellipse cx="98" cy="216" rx="30" ry="11" fill="#dceafa"/>'
+   +'<circle cx="98" cy="205" r="20" fill="#ffffff"/><circle cx="98" cy="177" r="15" fill="#ffffff"/>'
+   +'<circle cx="92" cy="174" r="2.4" fill="#3b4258"/><circle cx="104" cy="174" r="2.4" fill="#3b4258"/>'
+   +'<path d="M98 180 l13 3 l-13 3 z" fill="#ff8f3c"/>'
+   +'<path d="M87 168 h22" stroke="#e35d5d" stroke-width="4.5" stroke-linecap="round"/>'
+   +'<path d="M76 196 q-16 -8 -20 -20 M120 196 q16 -8 20 -20" stroke="#8a6a48" stroke-width="3.2" fill="none" stroke-linecap="round"/>'
+   +'<circle cx="98" cy="201" r="2.6" fill="#3b4258"/><circle cx="98" cy="211" r="2.6" fill="#3b4258"/></g>'
+   +'<g><rect x="266" y="192" width="54" height="36" rx="4" fill="#a9744a"/>'
+   +'<path d="M258 194 L293 166 L328 194 Z" fill="#8a5c3a"/>'
+   +'<path d="M258 194 L293 166 L328 194 Z" fill="#f4faff" opacity=".5"/>'
+   +'<rect x="284" y="206" width="17" height="22" rx="3" fill="#ffdf8f"/>'
+   +'<rect x="284" y="206" width="17" height="22" rx="3" fill="none" stroke="#c99a3c" stroke-width="2"/></g>';
+}
+var SCENE_DRAW={spring:sceneSpring, summer:sceneSummer, autumn:sceneAutumn, winter:sceneWinter};
+
+/* —— 雪花 —— */
+function snowHTML(n, full){
+  var h='';
+  for(var i=0;i<n;i++){
+    var size=(full?3.5:4)+Math.random()*(full?6:5.5);
+    var dur=(full?7:8)+Math.random()*(full?7:7);
+    var delay=(Math.random()*10).toFixed(2);
+    var left=(Math.random()*100).toFixed(2);
+    var top=(Math.random()*100-12).toFixed(1);
+    h+='<b style="left:'+left+'%;top:'+top+'%;width:'+size.toFixed(1)+'px;height:'+size.toFixed(1)+'px;opacity:'+(0.45+Math.random()*0.5).toFixed(2)
+      +';animation-duration:'+dur.toFixed(1)+'s;animation-delay:-'+delay+'s"></b>';
+  }
+  return h;
+}
+/* 把场景画进一块舞台 */
+function renderWorld(bgEl, snowEl, tagEl, total, uid){
+  if(!bgEl) return;
+  var sc=sceneCur(total);
+  bgEl.innerHTML='<svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
+    + SCENE_DRAW[sc.id](uid||'a') + '</svg>';
+  if(tagEl) tagEl.innerHTML=sc.emoji+' '+sc.name;
+  if(snowEl) snowEl.innerHTML=(sc.id==='winter')?snowHTML(34,false):'';
+}
+function refreshTestSnow(){
+  var el=$('testSnow'); if(!el) return;
+  el.innerHTML=(sceneCur(pandaTotal()).id==='winter')?snowHTML(30,true):'';
+}
+/* 首页 / 测试页同步刷新 */
+function refreshWorld(){
+  var t=pandaTotal();
+  renderWorld($('homeScene'), $('homeSnow'), $('homeWorldTag'), t, 'h');
+  refreshTestSnow();
+}
+/* 测试中途跨过门槛：冰天雪地到了，雪花立刻飘起来 */
+function liveWorldRefresh(s){
+  var total=livePandaTotal(s), sc=sceneCur(total);
+  if(sc.id==='winter'){ var el=$('testSnow'); if(el && !el.innerHTML) el.innerHTML=snowHTML(30,true); }
+}
+/* 结算：看看这次有没有搬进新地方，有就排队报喜 */
+function worldEarn(){
+  var n=sceneUnlocked(pandaTotal()).length, seen=sceneSeen();
+  if(n<=seen || pandaTotal()===0) return [];
+  sceneSetSeen(n);
+  var fresh=[];
+  for(var i=seen;i<n;i++) fresh.push(SCENES[i]);
+  for(var k=0;k<fresh.length;k++) pushToast(fresh[k].emoji, fresh[k].tip, fresh[k].color);
+  return fresh;
+}
+
+var CHEER=['太棒了！','真厉害！','好眼力！','这个字难不倒你！','超级棒！','你认识好多字呀！','哇，又对了！'];
+var SOFT=['没关系，这个字有点难','这个是新朋友，下次就认识啦','再看看哦，不着急','嗯，我们跳过它'];
+var PRAISE_END=['你坚持到底啦，真了不起！','今天的闯关全部完成！','豆豆给你鼓掌！'];
+
+var session=null, locked=false, lastResult=null;
+
+function $(id){ return document.getElementById(id); }
+function show(id){
+  var ss=document.querySelectorAll('.screen');
+  for(var i=0;i<ss.length;i++) ss[i].classList.remove('active');
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='screen-home') refreshPanda();
+}
+function setAccent(color){ document.documentElement.style.setProperty('--lv',color); }
+function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+function mascotHappy(on){
+  var ms=document.querySelectorAll('.mascot');
+  for(var i=0;i<ms.length;i++){
+    ms[i].classList.toggle('happy',!!on);
+    if(on){ ms[i].classList.remove('pop'); void ms[i].offsetWidth; ms[i].classList.add('pop'); }
+  }
+}
+function bubble(text){
+  var b=$('homeBubble'); if(b) b.textContent=text;
+}
+
+/* ---------- 首页交互 ---------- */
+function initHome(){
+  refreshPanda();
+  updateTurnHint();
+  /* 点豆豆（首页或结果页）就转个身 */
+  var hw=$('homeMascot'), rw=$('resPanda');
+  if(hw) hw.addEventListener('click',function(e){ e.stopPropagation(); turnMascot(); });
+  if(rw) rw.addEventListener('click',function(e){ e.stopPropagation(); turnMascot(); });
+  /* 第一次来，豆豆只有个头，先跟小朋友打个招呼 */
+  if(pandaTotal()===0){
+    $('homeBubble').textContent='嗨，我是熊猫豆豆！你每认识一些字，我就会长出新东西哦～';
+  }
+  var btn=$('btnStart');
+  btn.addEventListener('click',function(){
+    audioReady(); sfxTap();
+    var name=($('inName').value||'跳跳').trim()||'跳跳';
+    var age=parseInt($('inAge').value,10)||5;
+    var mEl=document.querySelector('.mode.on');
+    startTest({name:name, age:age, mode:mEl?mEl.dataset.mode:'read'});
+  });
+  var modes=document.querySelectorAll('.mode');
+  for(var i=0;i<modes.length;i++){
+    modes[i].addEventListener('click',function(){
+      audioReady(); sfxTap();
+      for(var j=0;j<modes.length;j++) modes[j].classList.remove('on');
+      this.classList.add('on');
+      var m=this.dataset.mode;
+      bubble(m==='read' ? '让小朋友把屏幕上的字读出来，你来点按钮就行！'
+           : (m==='sentence' ? '让小朋友读整句话，读不出来的字你在屏幕上点一下就好！'
+                             : '我会念一个字，让小朋友点出它，听着像玩游戏！'));
+    });
+  }
+  $('btnHelp').addEventListener('click',function(){ openHelp(); });
+  $('btnHistory').addEventListener('click',function(){ renderHistory(); show('screen-history'); });
+  $('btnBackHome').addEventListener('click',function(){ show('screen-home'); });
+  $('btnClearHist').addEventListener('click',function(){
+    confirmBox('清空全部成长记录？','这个操作不可撤销，确定要清空吗？',function(){ saveHistory([]); renderHistory(); });
+  });
+}
+
+/* ---------- 家长说明 ---------- */
+function openHelp(){
+  $('modalBox').innerHTML=''
+  +'<h3>家长看这里：怎么玩、怎么算</h3>'
+  +'<h4>三种玩法</h4>'
+  +'<ul>'
+  +'<li><b>读句子（测字最多）</b>：屏幕上出现一句话，小朋友整句念出来，<b>您把他没念出来的字点一下</b>（点错了再点一下可以取消），都会就直接点「都会，下一句」。一句 5~12 个字，读二十来句能测到一百多个不同的字，是几种玩法里测得最全面的。</li>'
+  +'<li><b>读一读（推荐）</b>：屏幕上出现一个字，小朋友读出来，您点「认识 / 不认识」。一个字一个字地测，不受上下文提示，最严格。</li>'
+  +'<li><b>找一找</b>：手机念出一个字，小朋友在 4 个字里点出来。孩子能自己玩，全程自动判分。</li>'
+  +'</ul>'
+  +'<h4>难度怎么走：爬梯子 + 回头复核</h4>'
+  +'<p>字表分成 10 个难度段（一星最容易，十星最难），总共覆盖约 <span class="hl">5000</span> 个常用汉字。单字玩法像爬梯子：先热身 3 题，然后每关打一组 3 题，<b>答对 2 题以上就往上走一关，不到 2 题就往回退一关</b>。</p>'
+  +'<p>一上一下来回折返的时候，说明"会／不会"的分界线就夹在这两关之间。这时候程序不会收工，而是<b>回头把分界附近那几关再补测几题</b>（分界那一关和它下面那一关各补到 5 题，上面那一关再摸 5 题）——因为只做开头几道题就下结论，误差会很大。整套下来大约 <span class="hl">25~35</span> 题。</p>'
+  +'<p>句子玩法则是一路围着"分界"挑句子：哪一句里<b>没测过、又刚好在你家孩子的水平线上</b>的字最多，就先读哪一句；已经测过的字再出现就只算一次，不重复计数。</p>'
+  +'<h4>识字量是怎么算出来的</h4>'
+  +'<p>先把每个难度段测出的认识率连成一条"认识率曲线"，再对全部约 <span class="hl">5000</span> 个常用字积分求和——没测到的段落按曲线走势计入，而不是一律算 0。<b>测到的字越多，实测所占的权重越大</b>。给出的区间综合了抽样波动和外推误差，所以<b>看区间比看单个数字更靠谱</b>；几种玩法各测一次，取中间值更稳。</p>'
+  +'<h4>豆豆的小世界（给孩子的奖励）</h4>'
+  +'<p>熊猫「豆豆」会随着孩子认对的字慢慢长大：先长出手脚，再穿上衣服、围上围巾、戴上帽子和眼镜、背上小书包，最后还有一顶小皇冠。攒到 <span class="hl">400</span> 字左右，他还会换上冬天的一整套装备——<b>毛线帽、小手套、耳罩、雪地靴、小棉袄</b>（这几个是跳跳提出来的点子）。</p>'
+  +'<p>豆豆住的地方也会跟着换：一开始是<b>春天的小花园</b>，然后搬到<b>夏天的海边</b>、<b>秋天的田野</b>，认到 <span class="hl">450</span> 字左右就住进<b>冰天雪地</b>——天上飘雪、门口有雪人和小雪松，屋里亮着暖黄的灯。所有进度都存在本机浏览器里，下次打开还在，换个浏览器/清缓存就会重来。</p>'
+  +'<h4>几点提醒</h4>'
+  +'<ul>'
+  +'<li>结果是<b>估算值</b>，受当天状态、注意力、玩法影响，有误差很正常，别拿它给孩子排名。</li>'
+  +'<li>测的时候请<b>不要提示</b>，也不要催，答不上来直接标出来，孩子不会有压力。</li>'
+  +'<li>「读句子」有上下文帮忙，同一个字在句子里往往比单独认更容易认出来，所以句子玩法的结果通常<b>略高于</b>单字玩法。两个数都合理，差得多的话以单字玩法为准。</li>'
+  +'<li>「找一找」是 4 选 1，本身有 25% 猜中率，程序已经做了去猜测校正，但仍不如前两种准。</li>'
+  +'<li>5 岁正是识字敏感期，把字当朋友认识，比"考"更重要。测完多鼓励，少纠正。</li>'
+  +'</ul>'
+  +'<h4>参考坐标（常见经验值）</h4>'
+  +'<table class="ref">'+AGE_REF.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+'</table>'
+  +'<div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn small" id="btnCloseHelp">知道啦</button></div>';
+  $('modal').classList.add('show');
+  $('btnCloseHelp').addEventListener('click',function(){ $('modal').classList.remove('show'); });
+}
+function confirmBox(title,desc,onOk){
+  $('modalBox').innerHTML='<h3>'+title+'</h3><p>'+desc+'</p>'
+  +'<div class="row" style="margin-top:18px;gap:10px;justify-content:flex-end">'
+  +'<button class="btn tiny" id="btnCNo">先不要</button>'
+  +'<button class="btn small" id="btnCOk">确定</button></div>';
+  $('modal').classList.add('show');
+  $('btnCNo').addEventListener('click',function(){ $('modal').classList.remove('show'); });
+  $('btnCOk').addEventListener('click',function(){ $('modal').classList.remove('show'); onOk&&onOk(); });
+}
+
+/* ---------- 测试流程 ---------- */
+function startTest(opt){
+  session=newSession(opt);
+  locked=false;
+  var isSent=session.mode==='sentence';
+  $('starCount').textContent='0';
+  $('qText').textContent=isSent?'测到 0 个字':'已做 0 题';
+  $('progBar').style.width='0%';
+  $('btnYes').disabled=false; $('btnNo').disabled=false;
+  $('parentBar').style.display = session.mode==='read' ? 'grid' : 'none';
+  $('sentBar').style.display = isSent ? 'grid' : 'none';
+  $('miniHint').textContent = isSent
+    ? '小朋友念完这句话，把他没念出来的字在屏幕上点一下（会变红），都会就直接点右边。'
+    : (session.mode==='read'
+        ? '家长提示：小朋友读对了点左边，读不出来点右边，不要提示哦'
+        : '孩子在听，点出对应的字就好；点错也没关系，会自动跳到下一题');
+  /* 豆豆带着之前攒下的零件出场，接下来每认对几个字就当场长一点 */
+  session.pandaShown=pandaUnlocked(pandaTotal()).length;
+  livePandaRefresh(session, true);
+  show('screen-test');
+  step();
+}
+function levelProgress(s){
+  if(s.mode==='sentence') return clamp(s.sentCount/SENT_MAX,0.02,0.97);
+  if(s.phase==='warmup') return clamp(s.count/3*0.07,0.01,0.07);
+  if(s.phase==='stair'){
+    var base=0.07+(s.curLevel-1)/LEVELS.length*0.60;
+    var within=((s.blockAsked||0)%BLOCK)/BLOCK*(0.60/LEVELS.length);
+    return clamp(base+within,0.07,0.70);
+  }
+  return clamp(0.72+(s.topupCount||0)/TOP_MAX*0.26,0.72,0.97);
+}
+function step(){
+  var s=session; if(!s) return;
+  var q=nextQuestion(s);
+  if(!q){ finish(); return; }
+  locked=false;
+
+  if(s.mode==='sentence'){
+    var lvS=LEVELS[q.level-1];
+    setAccent(lvS.color);
+    $('lvChip').textContent='第 '+(s.sentCount+1)+' 句';
+    $('progBar').style.width=(levelProgress(s)*100).toFixed(1)+'%';
+    $('progText').textContent='读句子：看看这句话认识几个字';
+    $('qText').textContent='测到 '+s.count+' 个字';
+    $('btnDone').textContent='都会，下一句 ✓';
+    $('btnDone').classList.remove('warm');
+    renderQuestion(q);
+    return;
+  }
+
+  var lv=LEVELS[q.level-1];
+  setAccent(lv.color);
+  if(s.phase==='stair' && s.shownLevel && q.level>s.shownLevel){
+    sfxLevelUp();
+    var b=$('fb'); b.className='fb ok show'; b.textContent='升到第 '+q.level+' 关啦！';
+    setTimeout(function(){ b.classList.remove('show'); },900);
+  }
+  s.shownLevel=q.level;
+  $('lvChip').textContent='第 '+q.level+' 关 ★'+q.level;
+  $('progBar').style.width=(levelProgress(s)*100).toFixed(1)+'%';
+  $('progText').textContent = s.phase==='warmup' ? '热身中，先认识几个老朋友'
+    : (s.phase==='topup' ? ('回头复核：再把第 '+q.level+' 关确认几题') : ('正在挑战：'+lv.name));
+  $('qText').textContent='已做 '+s.count+' 题';
+  renderQuestion(q);
+}
+/* 句子模式：整句渲染，每个字都能点一下标"不认识" */
+function renderSentence(q){
+  var s=session, area=$('questionArea');
+  $('prompt').textContent='请小朋友把这句话读出来';
+  var wrap=document.createElement('div');
+  wrap.className='sent';
+  for(var i=0;i<q.sen.t.length;i++){
+    var ch=q.sen.t[i];
+    var el=document.createElement('span');
+    el.className='c'+(NOT_SCORED[ch]?' punc':'');
+    el.textContent=ch;
+    if(!NOT_SCORED[ch]){
+      el.dataset.ch=ch;
+      el.addEventListener('click',function(){ toggleMark(this); });
+    }
+    wrap.appendChild(el);
+  }
+  area.appendChild(wrap);
+  updateMarkCount();
+}
+function toggleMark(el){
+  var s=session; if(!s||s.mode!=='sentence') return;
+  var ch=el.dataset.ch;
+  if(s.marks[ch]){ delete s.marks[ch]; el.classList.remove('unk'); }
+  else{
+    s.marks[ch]=1; el.classList.add('unk');
+    el.classList.remove('unkpop'); void el.offsetWidth; el.classList.add('unkpop');
+    sfxWrong();
+  }
+  sfxTap();
+  updateMarkCount();
+}
+function updateMarkCount(){
+  var s=session; if(!s) return;
+  var n=Object.keys(s.marks||{}).length;
+  var btn=$('btnDone');
+  if(n>0){
+    btn.textContent='有 '+n+' 个字不认识，下一句 →';
+    btn.classList.add('warm');
+  }else{
+    btn.textContent='都会，下一句 ✓';
+    btn.classList.remove('warm');
+  }
+}
+function resetMarks(){
+  var s=session; if(!s) return;
+  s.marks={};
+  var els=document.querySelectorAll('.sent .c.unk');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('unk');
+  updateMarkCount();
+}
+/* 提交这一句：记下每个字的对错，然后进入下一句 */
+function commitSentence(){
+  var s=session; if(!s||s.mode!=='sentence'||locked) return;
+  locked=true;
+  var info=submitSentence(s, s.marks);
+  $('starCount').textContent=s.stars;
+  $('qText').textContent='测到 '+s.count+' 个字';
+  /* 这一句认出来的字，也算进豆豆的成长 */
+  if(info && info.known>0){
+    s.earned += info.known;
+    var fresh=livePandaRefresh(s);
+    if(fresh) showPandaGrow(fresh);
+  }
+  var fb=$('fb');
+  var marked=info?info.marked:0;
+  if(marked===0){
+    fb.className='fb ok show'; fb.textContent=pick(CHEER); sfxCorrect(); mascotHappy(true);
+    var r=$('stage').getBoundingClientRect(); burst(window.innerWidth/2, r.top+r.height*0.3, 24);
+  }else{
+    fb.className='fb ok show'; fb.textContent='记下来啦，继续加油';
+  }
+  setTimeout(function(){ fb.classList.remove('show'); mascotHappy(false); if(session) step(); }, marked===0?760:620);
+}
+function renderQuestion(q){
+  var s=session, area=$('questionArea');
+  if(s.mode==='sentence'){ area.innerHTML=''; renderSentence(q); return; }
+  area.innerHTML='';
+  if(s.mode==='read'){
+    $('prompt').textContent='请小朋友把这个字读出来';
+    var d=document.createElement('div');
+    d.className='glyph enter'; d.textContent=q.ch;
+    area.appendChild(d);
+  }else{
+    $('prompt').textContent='听一听，点出正确的那个字';
+    var grid=document.createElement('div'); grid.className='opts';
+    q.options.forEach(function(c){
+      var b=document.createElement('button');
+      b.className='opt'; b.type='button'; b.textContent=c;
+      b.addEventListener('click',function(){ onOption(c,b); });
+      grid.appendChild(b);
+    });
+    area.appendChild(grid);
+    var spk=document.createElement('button');
+    spk.className='spk'; spk.type='button'; spk.innerHTML='&#9834;';
+    spk.title='再听一遍';
+    spk.addEventListener('click',function(){ audioReady(); speak(q.ch+'。请找出这个字。'); });
+    area.appendChild(spk);
+    setTimeout(function(){ speak(q.ch+'。请找出这个字。'); },260);
+  }
+}
+function onOption(c,btn){
+  if(locked) return;
+  locked=true;
+  var s=session, q=s.q;
+  var ok=(c===q.answer);
+  var all=document.querySelectorAll('.opt');
+  for(var i=0;i<all.length;i++) all[i].disabled=true;
+  if(ok){ btn.classList.add('right'); } else {
+    btn.classList.add('wrong');
+    for(var j=0;j<all.length;j++) if(all[j].textContent===q.answer) all[j].classList.add('right');
+  }
+  handleAnswer(ok,btn);
+  setTimeout(function(){ if(session) step(); }, ok?820:1250);
+}
+function handleAnswer(ok,srcEl){
+  var s=session;
+  var info=answerQuestion(s, ok);
+  if(!info) return;
+  $('qText').textContent='已做 '+s.count+' 题';
+  $('starCount').textContent=s.stars;
+  var fb=$('fb');
+  fb.className='fb';
+  void fb.offsetWidth;
+  if(ok){
+    fb.classList.add('ok');
+    fb.textContent=pick(CHEER);
+    sfxCorrect(); mascotHappy(true);
+    flyStar(srcEl || document.querySelector('.glyph') || $('stage'));
+    if(s.stars%5===0){ var r=$('stage').getBoundingClientRect(); burst(window.innerWidth/2, r.top+r.height*0.35, 30); }
+    /* 认对一个字，豆豆就往上涨一点 */
+    s.earned++;
+    var fresh=livePandaRefresh(s);
+    if(fresh) showPandaGrow(fresh);
+  }else{
+    fb.classList.add('no');
+    fb.textContent=pick(SOFT);
+    sfxWrong();
+  }
+  fb.classList.add('show');
+  setTimeout(function(){ fb.classList.remove('show'); mascotHappy(false); }, 700);
+}
+function flyStar(fromEl){
+  var src=(fromEl&&fromEl.getBoundingClientRect)?fromEl.getBoundingClientRect():{left:window.innerWidth/2-20,top:window.innerHeight/2,width:40,height:40};
+  var target=$('starCount').getBoundingClientRect();
+  var el=document.createElement('div');
+  el.className='flyingstar'; el.textContent='★';
+  el.style.left=(src.left+src.width/2-20)+'px';
+  el.style.top=(src.top+src.height/2-20)+'px';
+  document.body.appendChild(el);
+  requestAnimationFrame(function(){
+    el.style.transform='translate('+(target.left-src.left-src.width/2+target.width/2+20)+'px,'+(target.top-src.top-src.height/2+24)+'px) scale(.45)';
+    el.style.opacity='0.15';
+  });
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },900);
+}
+
+/* ---------- 结算 ---------- */
+function finish(){
+  var s=session; if(!s) return;
+  var r=computeResult(s);
+  lastResult=r;
+  /* 把这次认对的字记到豆豆的账上；先清掉临时计数，免得被算两遍 */
+  var freshParts=pandaEarn(s.earned||0);
+  s.earned=0;
+  var freshScenes=worldEarn();
+  sfxFinish();
+  var rect=$('stage').getBoundingClientRect();
+  burst(window.innerWidth/2, Math.min(rect.top+120,window.innerHeight*0.3), 46);
+  renderResult(r, s, freshParts, freshScenes);
+  show('screen-result');
+}
+function renderResult(r,s,freshParts,freshScenes){
+  freshParts=freshParts||[]; freshScenes=freshScenes||[];
+  $('resTitle').textContent = s.name+' 的识字量约';
+  $('resRange').textContent = '合理区间 '+r.lo+' ~ '+r.hi+' 字';
+  var stars='';
+  var n=Math.max(r.starLevel,1);
+  for(var i=1;i<=10;i++) stars += (i<=r.starLevel ? '★' : '<span style="color:#e3e9f4">★</span>');
+  $('resStars').innerHTML=stars;
+  var isSent=(s.mode==='sentence');
+  var howDone = isSent
+    ? ('共读了 <b>'+r.sentCount+'</b> 句、测到 <b>'+r.distinct+'</b> 个字，其中 '+r.correctTotal+' 个认识')
+    : ('共做 '+r.count+' 题、认识 '+r.correctTotal+' 题');
+  $('resLevelText').innerHTML = r.starLevel>0
+    ? ('稳定掌握到 <b>'+r.starLevel+' 星</b> 难度（'+LEVELS[r.starLevel-1].name+'），'+howDone)
+    : ('本次认识 '+r.correctTotal+' 个字，'+howDone);
+  $('certName').textContent=s.name;
+  $('certMeta').textContent=s.age+' 岁 · 收集到 '+r.starLevel+' 颗难度星 · '+todayStr();
+
+  /* —— 豆豆的成长：这次长出了哪些新零件 —— */
+  var pt=pandaTotal(), pun=pandaUnlocked(pt), pnext=pandaNext(pt), freshNames=[];
+  PANDA_PARTS.forEach(function(p){ if(freshParts.indexOf(p.id)>=0) freshNames.push(p.name); });
+  $('resPandaText').innerHTML = freshNames.length
+    ? ('这次新长出了 <b>'+freshNames.join('、')+'</b>！豆豆现在一共有 '+pun.length+' 个零件。')
+    : (pnext
+        ? ('这次没有长出新零件。再认对 <b>'+(pnext.at-pt)+'</b> 个字，豆豆就能长出「'+pnext.name+'」了。')
+        : '豆豆的零件已经全部长齐啦，真厉害！');
+  renderMascot($('resPanda'), pt);
+  $('resParts').innerHTML=PANDA_PARTS.map(function(p){
+    var on=pun.indexOf(p.id)>=0, fr=freshParts.indexOf(p.id)>=0;
+    return '<div class="pw-item'+(on?' on':'')+(fr?' fresh':'')+'">'
+      +'<div class="e">'+p.emoji+'</div><div class="n">'+p.name+'</div></div>';
+  }).join('');
+
+  /* —— 豆豆的小世界：住过哪些地方 —— */
+  renderWorld($('resScene'), $('resSnow'), $('resWorldTag'), pt, 'r');
+  var scNext=sceneNext(pt), freshScNames=[];
+  freshScenes.forEach(function(sc){ freshScNames.push(sc.name); });
+  $('resWorldNote').innerHTML = freshScNames.length
+    ? ('豆豆这次搬去了 <b>'+freshScNames.join('、')+'</b>！')
+    : (scNext
+        ? ('豆豆现在住在 <b>'+sceneCur(pt).name+'</b>，再认 <b>'+(scNext.at-pt)+'</b> 个字就搬去「'+scNext.name+'」')
+        : ('豆豆把四个季节都住遍啦，真了不起！'));
+  $('resScenes').innerHTML=SCENES.map(function(sc){
+    var on=pt>=sc.at, fr=freshScenes.indexOf(sc.id)>=0;
+    return '<div class="pw-item'+(on?' on':'')+(fr?' fresh':'')+'">'
+      +'<div class="e">'+sc.emoji+'</div><div class="n">'+sc.short+'</div></div>';
+  }).join('');
+
+  // 数字滚动
+  var el=$('resNum'), target=r.est, t0=null;
+  function animDigit(ts){
+    if(!t0) t0=ts;
+    var k=Math.min(1,(ts-t0)/900), e=1-Math.pow(1-k,3);
+    el.textContent=Math.round(target*e);
+    if(k<1) requestAnimationFrame(animDigit); else el.textContent=target;
+  }
+  requestAnimationFrame(animDigit);
+
+  // 分难度段条形
+  var bars='';
+  r.levels.forEach(function(L){
+    var pct=Math.round(L.pc*100);
+    var tested=L.asked>0;
+    bars+='<div class="bar">'
+      +'<span class="lb">'+L.stars+'星</span>'
+      +'<span class="tr"><i style="width:'+(tested?Math.max(pct,2):0)+'%;background:'+(tested?L.color:'#e6ecf8')+'"></i></span>'
+      +'<span class="pc">'+(tested?pct+'%':'—')+'</span>'
+      +'<span class="n">'+(tested?(L.correct+'/'+L.asked):'未测')+'</span>'
+      +'</div>';
+  });
+  $('resBars').innerHTML=bars;
+  $('resBarsNote').textContent = isSent
+    ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。没测到的难度段按曲线少量计入，不会直接算成 0。'
+    : '绿色越长表示这一段的字认识得越多；本次没测到的难度段按"认识率曲线"少量计入，不会直接算成 0。';
+
+  // 参考坐标
+  var est=r.est, rows=AGE_REF.map(function(row){
+    var a=parseInt(row[0],10);
+    var isSelf=false;
+    if(!isNaN(a)){
+      // 找到用户年龄对应的那一行
+      if(a===s.age) isSelf=true;
+    }
+    return '<tr><td style="'+(isSelf?'color:#2f8fd6;font-weight:900':'')+'">'+(isSelf?'▶ ':'')+row[0]+'</td><td style="'+(isSelf?'color:#2f8fd6;font-weight:900':'')+'">'+row[1]+'</td></tr>';
+  }).join('');
+  $('resRef').innerHTML=rows;
+
+  // 不认识的字
+  var wc='';
+  r.wrong.slice(0,40).forEach(function(c){ wc+='<button class="wordchip" data-c="'+c+'">'+c+'</button>'; });
+  $('resWrong').innerHTML = wc || '<div class="muted">这次几乎没有不认识的字，太厉害了！</div>';
+  var chips=$('resWrong').querySelectorAll('.wordchip');
+  for(var i2=0;i2<chips.length;i2++){
+    chips[i2].addEventListener('click',function(){ audioReady(); speak(this.dataset.c,0.7); });
+  }
+
+  // 存档
+  pushRecord({
+    date:todayStr(), ts:Date.now(), name:s.name, age:s.age, mode:s.mode,
+    est:r.est, lo:r.lo, hi:r.hi, stars:r.starLevel, count:r.count, correct:r.correctTotal,
+    sent:r.sentCount
+  });
+
+  // 成长曲线
+  var hist=loadHistory();
+  if(hist.length>=2){
+    $('resChartCard').style.display='block';
+    $('resChart').innerHTML=chartSVG(hist, 300);
+  }else{
+    $('resChartCard').style.display='none';
+  }
+
+  // 结果页按钮
+  $('btnAgain').onclick=function(){ audioReady(); sfxTap(); startTest({name:s.name, age:s.age, mode:s.mode}); };
+  $('btnHome2').onclick=function(){ audioReady(); sfxTap(); show('screen-home'); };
+  $('btnHist2').onclick=function(){ audioReady(); sfxTap(); renderHistory(); show('screen-history'); };
+  $('btnCopy').onclick=function(){
+    var txt=s.name+'（'+s.age+'岁）识字量测试结果：约 '+r.est+' 字（合理区间 '+r.lo+'~'+r.hi+'），'
+      +'玩法：'+modeName(s.mode)+'，'+(isSent?('共读 '+r.sentCount+' 句、测到 '+r.distinct+' 个字'):('共 '+r.count+' 题'))
+      +'，通过 '+r.starLevel+' 星难度。'+todayStr();
+    copyText(txt, this);
+  };
+}
+function modeName(m){
+  return m==='read' ? '读一读' : (m==='sentence' ? '读句子' : '找一找');
+}
+function copyText(txt, btn){
+  var done=function(){ var old=btn.textContent; btn.textContent='已复制 ✓'; setTimeout(function(){ btn.textContent=old; },1600); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done,function(){ fallbackCopy(txt,done); });
+  }else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,done){
+  try{
+    var ta=document.createElement('textarea');
+    ta.value=txt; ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); done();
+  }catch(e){ window.prompt('手动复制下面这段成绩：', txt); }
+}
+
+/* ---------- 成长记录 ---------- */
+function renderHistory(){
+  var hist=loadHistory();
+  if(!hist.length){
+    $('histEmpty').style.display='block'; $('histChart').innerHTML=''; $('histList').innerHTML='';
+    return;
+  }
+  $('histEmpty').style.display='none';
+  $('histChart').innerHTML = hist.length>=2 ? chartSVG(hist,300) : '<div class="muted" style="padding:6px 0 12px">再测一次就能看到成长曲线啦。</div>';
+  var html='';
+  hist.slice().reverse().forEach(function(h){
+    html+='<div class="histitem">'
+      +'<span class="dt">'+h.date+'</span>'
+      +'<span style="flex:1">'+h.name+' · '+h.age+'岁 · '+modeName(h.mode)+'</span>'
+      +'<span class="es">'+h.est+' 字</span>'
+      +'<span class="muted" style="width:74px;text-align:right">★'+h.stars+'</span>'
+      +'</div>';
+  });
+  $('histList').innerHTML=html;
+}
+function chartSVG(hist,height){
+  var data=hist.slice(-12);
+  var w=680, h=height, pad=42;
+  var vals=data.map(function(d){return d.est;});
+  var mx=Math.max.apply(null,vals), mn=Math.min.apply(null,vals);
+  if(mx===mn){ mx=mn+100; }
+  var span=mx-mn;
+  var pts=data.map(function(d,i){
+    var x=pad+(w-pad*2)*(data.length===1?0.5:i/(data.length-1));
+    var y=(h-pad-30)-((d.est-mn)/span)*(h-pad-70);
+    return {x:x,y:y,v:d.est,date:d.date};
+  });
+  var path=pts.map(function(p,i){return (i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1);}).join(' ');
+  var dots=pts.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="6" fill="#5cb8ff" stroke="#fff" stroke-width="3"/>'
+    +'<text x="'+p.x.toFixed(1)+'" y="'+(p.y-14).toFixed(1)+'" text-anchor="middle" font-size="16" font-weight="800" fill="#2b3a55">'+p.v+'</text>';}).join('');
+  var labels=pts.map(function(p){return '<text x="'+p.x.toFixed(1)+'" y="'+(h-10)+'" text-anchor="middle" font-size="12" fill="#9aa8c2">'+p.date.slice(5)+'</text>';}).join('');
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto">'
+    +'<rect x="0" y="0" width="'+w+'" height="'+h+'" rx="18" fill="#fbfdff"/>'
+    +'<path d="'+path+'" fill="none" stroke="#9ad6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
+    +dots+labels
+    +'<text x="'+pad+'" y="26" font-size="14" font-weight="800" fill="#71809e">识字量变化（字）</text>'
+    +'</svg>';
+}
+
+/* ---------- 启动 ---------- */
+function boot(){
+  initConfetti();
+  /* 第一次打开时先把"已经住过的地方"记下来，免得一次性弹一堆搬家提示 */
+  try{ if(localStorage.getItem(SCENE_KEY)===null) sceneSetSeen(sceneUnlocked(pandaTotal()).length); }catch(e){}
+  initHome();
+  $('btnYes').addEventListener('click',function(){ if(locked) return; audioReady(); locked=true; handleAnswer(true); setTimeout(function(){ step(); },560); });
+  $('btnNo').addEventListener('click',function(){ if(locked) return; audioReady(); locked=true; handleAnswer(false); setTimeout(function(){ step(); },430); });
+  $('btnDone').addEventListener('click',function(){ audioReady(); sfxTap(); commitSentence(); });
+  $('btnUnmark').addEventListener('click',function(){ audioReady(); sfxTap(); resetMarks(); });
+  $('btnQuit').addEventListener('click',function(){
+    if(session&&session.mode==='sentence'&&session.sentCount>0){
+      confirmBox('这次就读到这里吗？','直接看结果也行，成绩会按已经读完的句子来估算。',function(){ finish(); });
+      return;
+    }
+    confirmBox('要停下来了吗？','这次还没测完，不会保存成绩。可以随时重新开始。',function(){ session=null; show('screen-home'); });
+  });
+  window.addEventListener('keydown',function(e){
+    if(!$('screen-test').classList.contains('active')||!session||locked) return;
+    if(session.mode==='sentence'){
+      if(e.key==='Enter'||e.key===' '){ audioReady(); commitSentence(); }
+      return;
+    }
+    if(session.mode!=='read') return;
+    if(e.key==='1'||e.key==='Enter'||e.key===' '){ audioReady(); locked=true; handleAnswer(true); setTimeout(step,560); }
+    if(e.key==='2'||e.key==='Backspace'){ audioReady(); locked=true; handleAnswer(false); setTimeout(step,430); }
+  });
+  if('speechSynthesis' in window){ try{ window.speechSynthesis.getVoices(); }catch(e){} }
+}
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+  else boot();
+}
+</script>
+</body>
+</html>
