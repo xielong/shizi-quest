@@ -285,7 +285,7 @@ function topupNext(s){
 /* 一组题打完后的判级：过关往上、没过往下（这就是"答错不结束、回头再测"的来源） */
 
 function stairDecide(s){
-  var c=s.curLevel, pass=(s.blockCorrect>=PASS_NEED);
+  var c=s.curLevel, aced=(s.blockCorrect>=BLOCK), pass=(s.blockCorrect>=PASS_NEED);
   s.blockAsked=0; s.blockCorrect=0;
   var dir=pass?1:-1;
   if(dir!==s.lastDir) s.reversals++;      // 折返次数 = 边界已经被夹住几次
@@ -293,8 +293,12 @@ function stairDecide(s){
 
   if(pass){
     s.floorFails=0;
-    if(c>=LEVELS.length){ s.stopReason='ceiling'; s.done=true; return; }
-    s.curLevel=c+1;
+    // 一组三题全对说明这一关太轻松，直接往上跳两关：题量省下来，
+    // 也更容易摸到高难度那几关（不然题量上限一到就停在半路，估算只能靠外推）
+    var jump=aced?2:1, next=c+jump;
+    if(next>LEVELS.length) next=LEVELS.length;
+    if(next===c){ s.stopReason='ceiling'; s.done=true; return; }  // 最高关也全过：测到顶了
+    s.curLevel=next;
   }else{
     if(c<=1){
       s.curLevel=1;
@@ -540,14 +544,19 @@ function computeResult(s){
   // 至少给一点宽度，别让区间看起来像精确值
   if(hi10<est10+80) hi10=est10+80;
   if(lo10>est10-80) lo10=Math.max(0,est10-80);
-  var wrong=[];
-  s.answers.forEach(function(a){ if(!a.correct && wrong.indexOf(a.ch)<0) wrong.push(a.ch); });
+  var wrong=[], misses=0;
+  s.answers.forEach(function(a){
+    if(!a.correct){ misses++; if(wrong.indexOf(a.ch)<0) wrong.push(a.ch); }
+  });
+  // 一道都没答错：说明一路过关斩将爬到了字表顶端，这时的估算是"下限"而不是精确值
+  // （字表一共就 5000 字，他真正的水平可能还在上面），结果页要照这个口径说
+  var topOut=(misses===0 && s.count>0);
   return {
     est:est10, lo:Math.min(lo10,est10), hi:Math.min(5000,Math.max(hi10,est10)),
     starLevel:starLevel, levels:levels, wrong:wrong,
     count:s.count, askedTotal:s.count, correctTotal:s.stars,
     stopReason:s.stopReason, mode:s.mode, sentCount:s.sentCount||0,
-    distinct:s.count
+    distinct:s.count, misses:misses, topOut:topOut
   };
 }
 
@@ -658,4 +667,4 @@ function levelProgress(s){
 }
 
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, FIT_BMIN, WARM_N, TOPN, BLEND_N, SENT_WARM, SENT_MAX, SENT_SKIP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, BOOT_N, randn, pointsOf, fitPoints, fitCurve, totalOf, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, FIT_BMIN, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, BLEND_N, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, BOOT_N, randn, pointsOf, fitPoints, fitCurve, totalOf, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };

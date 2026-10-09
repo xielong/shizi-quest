@@ -10,6 +10,14 @@
 .st.on { color: #ffc93c; }
 .leveltext { margin-top: 14rpx; }
 
+/* 全对到顶的说明 */
+.topnote {
+  text-align: left; margin-top: 24rpx; padding: 22rpx 26rpx;
+  background: #fff8e8; border: 3rpx solid #ffe2a8; border-radius: 24rpx;
+}
+.tn-t { font-size: 28rpx; font-weight: 900; color: #d9920b; margin-bottom: 10rpx; }
+.tn-b { font-size: 25rpx; color: #8a7a55; line-height: 1.7; margin-top: 8rpx; }
+
 .h3 { font-size: 32rpx; font-weight: 900; margin-bottom: 10rpx; }
 
 /* 迷你世界 */

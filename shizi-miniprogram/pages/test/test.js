@@ -50,7 +50,7 @@ Page({
     var patch = { qKey: this._qKey, prog: Math.round(E.levelProgress(s) * 1000) / 10 };
 
     if (s.mode === 'sentence') {
-      patch.lvChip = '第 ' + (s.sentCount + 1) + ' 句';
+      patch.lvChip = '第 ' + (s.sentCount + 1) + ' / ' + E.SENT_MAX + ' 句';
       patch.progText = '读句子：看看这句话认识几个字';
       patch.qText = '测到 ' + s.count + ' 个字';
       patch.prompt = '请小朋友把这句话读出来';
@@ -72,7 +72,7 @@ Page({
       patch.progText = s.phase === 'warmup' ? '热身中，先认识几个老朋友'
         : (s.phase === 'topup' ? ('回头复核：再把第 ' + q.level + ' 关确认几题')
                                : ('正在挑战：' + lv.name));
-      patch.qText = '已做 ' + s.count + ' 题';
+      patch.qText = '已做 ' + s.count + ' 题 · 最多 ' + E.MAX_Q + ' 题';
       if (s.mode === 'read') {
         patch.prompt = '请小朋友把这个字读出来';
         patch.q = { type: 'read', ch: q.ch, level: q.level };

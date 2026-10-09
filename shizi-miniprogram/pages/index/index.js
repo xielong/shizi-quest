@@ -65,6 +65,7 @@ Page({
     if (id === this.data.curPid) return;
     store.setCur(id);
     app.reloadProfile();
+    app.clearLastResult();
     this.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
     this.loadPlayers();
     this.refresh();
@@ -83,6 +84,7 @@ Page({
         if (!nm) return;
         store.addPlayer(nm, 5);
         app.reloadProfile();
+        app.clearLastResult();
         that.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
         that.loadPlayers();
         that.refresh();
@@ -141,6 +143,7 @@ Page({
         if (!res.confirm) return;
         store.removePlayer(target.id);
         app.reloadProfile();
+        app.clearLastResult();
         that.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
         that.loadPlayers();
         that.refresh();
@@ -161,6 +164,7 @@ Page({
       success: function (res) {
         if (!res.confirm) return;
         store.clearPlayerData(cur.id);
+        app.clearLastResult();
         that.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
         that.refresh();
         wx.showToast({ title: '进度已清零，豆豆重新开始', icon: 'none', duration: 1800 });

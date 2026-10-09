@@ -1,13 +1,20 @@
 <view class="page">
   <!-- 识字量 -->
   <view class="card hero">
-    <view class="hero-title">{{name}} 的识字量约</view>
+    <view class="hero-title">{{name}} 的识字量{{estWord}}</view>
     <view class="hero-num"><text class="big">{{shownEst}}</text><text class="unit">字</text></view>
     <view class="rng">合理区间 {{r.lo}} ~ {{r.hi}} 字</view>
     <view class="starrow">
       <text wx:for="{{starStars}}" wx:key="i" class="st {{item.on?'on':''}}">★</text>
     </view>
     <view class="muted leveltext">{{levelText}}</view>
+
+    <!-- 全对：这不是精确值，而是"下限"，得跟家长说清楚 -->
+    <view wx:if="{{topOut}}" class="topnote">
+      <view class="tn-t">全部答对，字表测到顶了</view>
+      <view class="tn-b">这套字表一共 5000 个字，他从最简单的第一关一路全对闯到了最后一关，说明这张表已经量不出来了，所以上面写的是「至少」。</view>
+      <view class="tn-b">如果这个数字看着偏高，可以再测一次、判分严格些：比如他要犹豫好几秒才想起来，就算「不认识」。这样测出来的分界才清楚。</view>
+    </view>
   </view>
 
   <!-- 豆豆长大了多少 -->

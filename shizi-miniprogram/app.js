@@ -34,5 +34,12 @@ App({
   reloadProfile: function () {
     this.globalData.profile = store.getProfile();
     return this.globalData.profile;
+  },
+
+  /* 换人、清空进度之后，上一次的结果就不能再挂着了（否则容易看到别人的旧成绩） */
+  clearLastResult: function () {
+    this.globalData.lastResult = null;
+    this.globalData.lastFresh = { parts: [], scenes: [] };
+    this.globalData.session = null;
   }
 });

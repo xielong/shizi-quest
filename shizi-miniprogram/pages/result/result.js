@@ -10,6 +10,7 @@ Page({
   data: {
     name: '', shownEst: 0,
     r: null, starStars: [], levelText: '',
+    topOut: false, estWord: '约',
     pandaText: '', panda: [], sceneSrc: '', sceneTag: '', snow: [],
     parts: [], scenes: [], worldNote: '',
     bars: [], barsNote: '',
@@ -27,6 +28,8 @@ Page({
     var profile = app.profile();
     var total = store.pandaTotal();
     var isSent = r.mode === 'sentence';
+    /* 一道都没答错：这是"下限"，不是精确值（字表一共 5000 字，测不出来了） */
+    var topOut = !!r.topOut;
 
     /* ---- hero ---- */
     var starStars = [], i;
@@ -34,9 +37,14 @@ Page({
     var howDone = isSent
       ? ('共读了 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字，其中 ' + r.correctTotal + ' 个认识')
       : ('共做 ' + r.count + ' 题、认识 ' + r.correctTotal + ' 题');
-    var levelText = r.starLevel > 0
-      ? ('稳定掌握到 ' + r.starLevel + ' 星难度（' + E.LEVELS[r.starLevel - 1].name + '），' + howDone)
-      : ('本次认识 ' + r.correctTotal + ' 个字，' + howDone);
+    var levelText;
+    if (topOut) {
+      levelText = '全部答对！一路闯到最高难度（' + E.LEVELS[E.LEVELS.length - 1].name + '），' + howDone;
+    } else {
+      levelText = r.starLevel > 0
+        ? ('稳定掌握到 ' + r.starLevel + ' 星难度（' + E.LEVELS[r.starLevel - 1].name + '），' + howDone)
+        : ('本次认识 ' + r.correctTotal + ' 个字，' + howDone);
+    }
 
     /* ---- 豆豆的成长 ---- */
     var pun = E.pandaUnlocked(total), pnext = E.pandaNext(total), freshNames = [];
@@ -82,6 +90,8 @@ Page({
       r: r,
       starStars: starStars,
       levelText: levelText,
+      topOut: topOut,
+      estWord: topOut ? '至少' : '约',
       pandaText: pandaText,
       panda: P.layers(total, 'front'),
       sceneSrc: P.sceneImage(total),
@@ -140,9 +150,9 @@ Page({
   copyResult: function () {
     var r = this.data.r, profile = app.profile();
     var isSent = r.mode === 'sentence';
-    var txt = profile.name + '（' + profile.age + '岁）识字量测试结果：约 ' + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
+    var txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (r.topOut ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
       + '玩法：' + E.modeName(r.mode) + '，' + (isSent ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字') : ('共 ' + r.count + ' 题'))
-      + '，通过 ' + r.starLevel + ' 星难度。' + E.todayStr();
+      + '，通过 ' + r.starLevel + ' 星难度。' + (r.topOut ? '（全部答对，测到字表上限）' : '') + E.todayStr();
     var that = this;
     wx.setClipboardData({
       data: txt,
