@@ -211,7 +211,9 @@ Page({
   refreshMini: function (quiet) {
     var s = this.s;
     if (!s) return;
-    var live = store.pandaTotal() + (s.earned || 0);
+    /* ×EARN_RATE：跟结算口径对齐（finish 里 pandaEarn 也是乘 2 的），
+       这样"当场长出来"的零件和最终落账的完全一致 */
+    var live = store.pandaTotal() + (s.earned || 0) * E.EARN_RATE;
     var patch = { mini: P.layers(live, this._facing) };
     /* 跨进冬天：测试页当场下雪 */
     if (E.sceneCur(live).id === 'winter' && !this.data.testSnow.length) {
@@ -240,7 +242,7 @@ Page({
   turnMini: function () {
     if (!this.s) return;
     this._facing = this._facing === 'back' ? 'front' : 'back';
-    this.setData({ mini: P.layers(store.pandaTotal() + (this.s.earned || 0), this._facing) });
+    this.setData({ mini: P.layers(store.pandaTotal() + (this.s.earned || 0) * E.EARN_RATE, this._facing) });
   },
 
   /* ---------- 这一轮的额度用完了 ----------
