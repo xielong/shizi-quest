@@ -10,8 +10,8 @@ Page({
   data: {
     name: '', shownEst: 0,
     r: null, starStars: [], levelText: '',
-    topOut: false, estWord: '约',
-    accumText: '', roughText: '',
+    topOut: false, noMiss: false, estWord: '约',
+    accumText: '', roughText: '', noMissText: '',
     pandaText: '', panda: [], sceneSrc: '', sceneTag: '', snow: [],
     parts: [], scenes: [], worldNote: '',
     bars: [], barsNote: '',
@@ -29,8 +29,13 @@ Page({
     var profile = app.profile();
     var total = store.pandaTotal();
     var isSent = r.mode === 'sentence';
-    /* 一道都没答错：这是"下限"，不是精确值（字表一共 5000 字，测不出来了） */
+    /* 一道都没答错 —— 分两种情况：
+       ① topOut：真的一路全对闯到了最高关，这张表量不出他了；
+       ② noMiss：只是这一轮没答错（题还没做完 / 提前退出，或者他恰好没碰到生字）。
+       两种都是"下限"口径，但 ② 必须说清楚，不然家长会以为孩子就认识这么点、
+       或者（旧版本的毛病）看着数字贴到 5000 一头雾水。 */
     var topOut = !!r.topOut;
+    var noMiss = (r.misses === 0 && r.count > 0 && !topOut);
 
     /* ---- hero ---- */
     var starStars = [], i;
@@ -44,13 +49,22 @@ Page({
       ? ('这是第 ' + (r.rounds || 2) + ' 轮。一场只出十来题，免得孩子坐不住；'
          + '所以上面这个数字是把「这一轮 ' + r.count + ' 题」和「前面攒下的 ' + priorN + ' 题」合起来算的。')
       : '';
-    var roughText = priorN > 0
+    var roughText = (priorN > 0 || noMiss)
       ? ''
       : ('这是第一轮摸底，一共才 ' + r.count + ' 题，先看个大概就好。'
          + '用同一种玩法再玩一两轮，前面的证据会累加进来，数字会稳很多。');
+    /* 没答错过 → 数字是下限，得说清楚（这也是家长看到的"怎么才这么点/怎么贴顶"的答案） */
+    var noMissText = noMiss
+      ? ('他这轮 ' + r.count + ' 题一道都没答错，说明还没摸到"他认不出的那条线"，'
+         + '所以上面这个数字是保守下限（至少这么多），不是精确值。'
+         + '想看得更准：用同一种玩法再玩一两轮，前面的证据会累加进来；'
+         + '或者一次多玩几题，等他碰到认不出的字，分界才会露出来。')
+      : '';
     var levelText;
     if (topOut) {
       levelText = '全部答对！一路闯到最高难度（' + E.LEVELS[E.LEVELS.length - 1].name + '），' + howDone;
+    } else if (noMiss) {
+      levelText = '这轮一道都没答错，还没碰到他认不出的字，' + howDone;
     } else {
       levelText = r.starLevel > 0
         ? ('稳定掌握到 ' + r.starLevel + ' 星难度（' + E.LEVELS[r.starLevel - 1].name + '），' + howDone)
@@ -87,8 +101,8 @@ Page({
       };
     });
     var barsNote = isSent
-      ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。这里把前面几轮的证据也一起算进来了，所以题数可能比这一轮做的多。没测到的难度段按曲线少量计入，不会直接算成 0。'
-      : '颜色越长表示这一段的字认识得越多；题数是"这一轮 + 前面几轮"合起来的（一场题少，靠多轮累积看趋势）。本次没测到的难度段按"认识率曲线"少量计入，不会直接算成 0。';
+      ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。题数把前面几轮也一起算进来了，所以可能比这一轮做的多。标「未测」的难度段这一轮没出到题，估算时不给它加分——所以上面的数字不会凭想象往上飘。'
+      : '颜色越长表示这一段的字认识得越多；题数是"这一轮 + 前面几轮"合起来的（一场题少，靠多轮累积看趋势）。标「未测」的难度段这一轮没出到题，估算时不给它加分——所以上面的数字不会凭想象往上飘。';
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {
@@ -102,8 +116,9 @@ Page({
       starStars: starStars,
       levelText: levelText,
       topOut: topOut,
-      estWord: topOut ? '至少' : '约',
-      accumText: accumText, roughText: roughText,
+      noMiss: noMiss,
+      estWord: (topOut || noMiss) ? '至少' : '约',
+      accumText: accumText, roughText: roughText, noMissText: noMissText,
       pandaText: pandaText,
       panda: P.layers(total, 'front'),
       sceneSrc: P.sceneImage(total),
@@ -162,10 +177,13 @@ Page({
   copyResult: function () {
     var r = this.data.r, profile = app.profile();
     var isSent = r.mode === 'sentence';
-    var txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (r.topOut ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
+    var lowB = !!(r.topOut || (r.misses === 0 && r.count > 0));   // 没答错过 = 下限口径
+    var txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (lowB ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
       + '玩法：' + E.modeName(r.mode) + '，' + (isSent ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字') : ('共 ' + r.count + ' 题'))
       + (r.priorN > 0 ? ('（第 ' + r.rounds + ' 轮，把前面几轮攒的 ' + r.priorN + ' 题也一起算了）') : '')
-      + '，通过 ' + r.starLevel + ' 星难度。' + (r.topOut ? '（全部答对，测到字表上限）' : '') + E.todayStr();
+      + '，通过 ' + r.starLevel + ' 星难度。'
+      + (r.topOut ? '（全部答对，测到字表上限）' : (lowB ? '（一道都没答错，还没测到他的边界，这是下限）' : ''))
+      + E.todayStr();
     var that = this;
     wx.setClipboardData({
       data: txt,

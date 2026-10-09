@@ -25,6 +25,12 @@
       <view class="tn-b">这套字表一共 5000 个字，他从最简单的第一关一路全对闯到了最后一关，说明这张表已经量不出来了，所以上面写的是「至少」。</view>
       <view class="tn-b">如果这个数字看着偏高，可以再测一次、判分严格些：比如他要犹豫好几秒才想起来，就算「不认识」。这样测出来的分界才清楚。</view>
     </view>
+
+    <!-- 没答错过但没测到顶：数字只是下限，别让家长当成精确值 -->
+    <view wx:if="{{noMiss}}" class="topnote">
+      <view class="tn-t">这轮没答错，数字是「下限」</view>
+      <view class="tn-b">{{noMissText}}</view>
+    </view>
   </view>
 
   <!-- 豆豆长大了多少 -->

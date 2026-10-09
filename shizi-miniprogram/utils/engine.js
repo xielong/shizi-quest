@@ -1,8 +1,8 @@
 /* =========================================================================
    engine.js —— 识字大冒险的纯逻辑层（从小程序无关的角度抽取，不含任何渲染/DOM）
    来源：网页版 shizi-quest/index.html 的 <script>，逐块搬运，逻辑未改动
-   包含：10 档字表(510字)、202 句故事题库、自适应出题引擎(爬梯子+回头复核)、
-        逻辑曲线拟合估算 + 参数自助法区间、熊猫/四季场景的解锁门槛
+   包含：10 档字表(5000字)、202 句故事题库、自适应出题引擎(爬梯子+回头复核)、
+        按测到的段折算的识字量估算（+ 参数自助法区间）、熊猫/四季场景的解锁门槛
    ========================================================================= */
 'use strict';
 
@@ -138,10 +138,6 @@ var SENTENCES=SENTENCE_TEXT.map(function(t,idx){
   return {t:t, uniq:uniq, lvs:lvs, mx:mx, avg:avg, lv:Math.max(1,Math.min(10,Math.round(0.5*mx+0.5*avg)))};
 });
 
-/* 拟合曲线时对"陡峭度"设上下限：太陡或太平都不符合字频规律，加个约束更稳 */
-
-var FIT_BMIN = 0.4, FIT_BMAX = 3.0;
-
 /* =========================================================================
    SECTION: ENGINE — 自适应出题 + 识字量估算（纯逻辑，不碰 DOM）
 
@@ -153,8 +149,8 @@ var FIT_BMIN = 0.4, FIT_BMAX = 3.0;
      3) 回头复核：夹住分界以后停下来回头补测——分界那一关和它下面那一关
         都补到 TOPN 题，分界上面那一关再摸 TOP_ABOVE 题。
         这样估算依据的是"分界附近的一整批题"，而不是开头那几道。
-   估算：把各段实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合，
-        用曲线补齐没测到的难度段，再 Σ（认识率 × 该段字数）。
+   估算：只按真正出过题的难度段折算（答对÷出了几题 × 该段字数），
+        没出到题的段不给分 —— 详细口径见 SECTION: ESTIMATE。
    ========================================================================= */
 /* 出题参数（下面这几个值都是跑蒙特卡洛模拟标定出来的）
    2026-10 又砍了一轮：家长反映"一次要答几十道，孩子坐不住"。
@@ -171,9 +167,6 @@ var STAIR_MIN_Q=7;
 /* 折返几次就算"分界夹住"了。跨轮累积以后，一轮夹住一次就够——
    下一轮会从这次的分界接着测（见 newSession 的起测关） */
 var REV_NEED=1;
-/* 实测认识率的权重 = n/(n+BLEND_N)：题越多越信实测，题少就更多听曲线 */
-
-var BLEND_N=2;
 
 /* 一场题少，每个字给的成长值就按 2 点算，豆豆长大的节奏跟以前持平 */
 var EARN_RATE=2;
@@ -520,16 +513,10 @@ function answerQuestion(s,correct){
   s.q=null;
   return {level:lv, correct:!!correct, ch:q.ch};
 }
-/* 识字量估算：
-   1) 把已测难度段的实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合；
-   2) 用拟合曲线给每一段一个认识率（已测段与实测值混合），未测段取曲线值；
-   3) 识字量 = Σ（每段认识率 × 该段字数）。
-   这样"边界之外"的字不会被打成 0，比单纯逐段相加更接近真实。
-
-   区间的算法（参数自助法）：
-   把每个已测段的实测认识率按它的抽样标准差随机抖一下，重新拟合曲线、重新求和，
-   重复几十次后取 10% 和 90% 分位。好处是自动体现了"曲线是被所有段一起钉住的"
-   这件事——逐段独立相加算出来的区间会宽出两倍多，因为忽略了段与段之间的约束。 */
+/* 把各难度段的实测认识率整理成点列（听音模式先去猜测校正）：
+   {i:第几关, n:出了几题, k:答对几题, p:校正后的认识率, se:抽样标准误}
+   先验（前面几轮攒下的证据）会先并进来，见 SECTION: PRIOR。
+   估算怎么用这些点见 SECTION: ESTIMATE。 */
 
 var BOOT_N=60, BOOT_SEED_FLOOR=0.08;
 
@@ -550,41 +537,78 @@ function pointsOf(s){
   return pts;
 }
 
-function fitPoints(pts, fine){
-  if(!pts.length) return null;
-  var bs = fine?0.05:0.15, is = fine?0.1:0.25;
-  var best=null;
-  for(var b=FIT_BMIN;b<=FIT_BMAX+0.001;b+=bs){
-    for(var i0=0.4;i0<=12.61;i0+=is){
-      var err=0;
-      for(var t=0;t<pts.length;t++){
-        var f=1/(1+Math.exp(b*(pts[t].i-i0))), d=f-pts[t].p;
-        err+=pts[t].n*d*d;
-      }
-      if(best===null||err<best.e) best={e:err,b:b,i0:i0};
-    }
+/* =========================================================================
+   SECTION: ESTIMATE — 识字量怎么算（家长口径，2026-10 定）
+
+   字表分成 LEVELS.length 个难度段，每段有自己的字数。算总数就一句话：
+   **只按真正出过题的段、按"答对÷出了几题"的比例折算**。
+
+     1) 测过的段：这一段一共 size 个字，出了 n 题答对 k 题，
+        就记 (k/n) × size 个字。例：段里 100 字、出 10 题对 3 题 → 30 字。
+     2) 实测范围之内、这一轮没出到题的段：认识率随难度单调下降，
+        所以它的真值一定夹在两边已测段之间 —— 取小的那个（宁少不多）。
+        这不算外推，是被数据夹住的。
+     3) 实测范围之上的段：**不给分**。以前这里是"用拟合曲线补齐"，
+        而逻辑拟合在"证据全是答对"时是不可辨识的：只答对两三题也能把
+        曲线中心推到实测范围之外，让上面每一关都算成"几乎全认识"，
+        总数直接贴到 5000。（2026-10 家长三次反馈的就是这个。）
+     4) 区间的上沿单独补一点余地：实测范围之上的段按"最靠上那一关的比率、
+        每远一关打 EXTRAP_DECAY 折"粗估一个上限 —— 只用来回答
+        "最多可能到多少"，不进点估计。
+
+   代价（模拟标定 /tmp/mp/bench7.js）：一轮 12 题最多覆盖六关左右，
+   范围之上的段不给分，所以大孩子会被算低（真值 1500 及以上偏低一到三成）。
+   但这个偏差方向是"只少不多"，结果页按"至少 N 字"的口径说明；
+   多玩两轮覆盖更全，数字自己会往上走（跨轮累积见 SECTION: PRIOR）。
+   反过来，只要孩子真的闯到了最高关，十段全被覆盖，总数自然就是 5000。
+   ========================================================================= */
+
+/* 实测范围之上每远一关打几折（只用于区间上沿，跑模拟标定的 /tmp/mp/bench7.js） */
+var EXTRAP_DECAY=0.6;
+
+/* 实测范围之内、但这一轮没出到题的段：取两边已测段里小的那个 */
+function innerRate(m, pts){
+  var lo=null, hi=null;
+  for(var t=0;t<pts.length;t++){
+    var i=pts[t].i;
+    if(i<m && (!lo || i>lo.i)) lo=pts[t];
+    if(i>m && (!hi || i<hi.i)) hi=pts[t];
   }
-  return {b:best.b, i0:best.i0, at:function(i){ return 1/(1+Math.exp(best.b*(i-best.i0))); }};
+  if(lo&&hi) return Math.min(lo.p, hi.p);
+  return 0;        /* 出到实测范围之外了 → 不给分 */
 }
-
-function fitCurve(s){ return fitPoints(pointsOf(s), true); }
-/* 给一批（等级, 认识率, 题数）算总识字量 */
-
-function totalOf(pts, fit){
-  var map={};
-  for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
-  var total=0;
+/* 点估计 = Σ（每段认识率 × 该段字数） */
+function totalOf(pts){
+  var map={}, t;
+  for(t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
+  var sum=0;
   for(var m=1;m<=LEVELS.length;m++){
     var pt=map[m];
-    var mod=fit?fit.at(m):(pt?pt.p:0);
-    var wm=pt?pt.n/(pt.n+BLEND_N):0;
-    total += (pt?(wm*pt.p+(1-wm)*mod):mod)*LEVELS[m-1].size;
+    sum += (pt?pt.p:innerRate(m, pts))*LEVELS[m-1].size;
   }
-  return total;
+  return sum;
+}
+/* 区间上沿额外允许的量：实测范围之上的段，按最靠上那一关的比率打折估个上限 */
+function outerAllowance(pts){
+  var hi=0, bi=0, base=0, t;
+  for(t=0;t<pts.length;t++) if(pts[t].i>hi) hi=pts[t].i;
+  if(!hi) return 0;
+  for(t=0;t<pts.length;t++) if(pts[t].i>bi && pts[t].i<=hi){ bi=pts[t].i; base=pts[t].p; }
+  var sum=0;
+  for(var m=hi+1;m<=LEVELS.length;m++){
+    sum += base*Math.pow(EXTRAP_DECAY, m-hi)*LEVELS[m-1].size;
+  }
+  return sum;
 }
 
-function bootstrapInterval(pts){
+/* 区间的算法（参数自助法）：
+   把每个已测段的实测认识率按它的抽样标准差随机抖一下，重新求和，
+   重复几十次后取 10% 和 90% 分位。抖动只作用于实测段，未测段那部分
+   按上面的上限一并计入（extra），所以区间会同时体现"抽样抖动"和
+   "上面那几关到底有没有字"这两层不确定。 */
+function bootstrapInterval(pts, extra){
   if(!pts.length) return [0,0];
+  extra=extra||0;
   var totals=[];
   for(var r=0;r<BOOT_N;r++){
     var pert=[];
@@ -592,7 +616,7 @@ function bootstrapInterval(pts){
       var p=pts[t];
       pert.push({i:p.i, n:p.n, p:clamp(p.p+randn()*p.se,0,1)});
     }
-    totals.push(totalOf(pert, fitPoints(pert,false)));
+    totals.push(totalOf(pert)+extra);
   }
   totals.sort(function(a,b){return a-b;});
   function q(f){ return totals[clamp(Math.round(f*(BOOT_N-1)),0,BOOT_N-1)]; }
@@ -604,26 +628,23 @@ function computeResult(s){
   var pts=pointsOf(s);
   var map={};
   for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
-  var fit=fitPoints(pts, true);
+  var allow=outerAllowance(pts);   // 实测范围之上的上限补偿，只进区间上沿
   var est=0, levels=[];
   for(var m=1;m<=LEVELS.length;m++){
     var size=LEVELS[m-1].size;
     var pt=map[m];
     var n=pt?pt.n:0, k=pt?pt.k:0;
-    var mes = pt ? clamp((k/n-guess)/(1-guess),0,1) : null;
-    var mod = fit ? fit.at(m) : (mes===null?0:mes);
-    // 实测题数越多越信实测，题少就更多听曲线的
-    var wm  = n ? n/(n+BLEND_N) : 0;
-    var pc  = n ? (wm*mes + (1-wm)*mod) : mod;
+    /* 测过的段 → 实测比例；范围内的空段 → 两边夹小的那个；范围之上 → 0 */
+    var pc=pt?clamp((k/n-guess)/(1-guess),0,1):innerRate(m, pts);
     est+=pc*size;
     levels.push({i:m, size:size, stars:LEVELS[m-1].stars, name:LEVELS[m-1].name, color:LEVELS[m-1].color,
                  asked:n, correct:k, p:n?k/n:0, pc:pc});
   }
-  // 区间：参数自助法（见上面的说明）
-  var iv=bootstrapInterval(pts);
+  // 区间：参数自助法 + 未测段的上限补偿（见 SECTION: ESTIMATE）
+  var iv=bootstrapInterval(pts, allow);
   var lo=iv[0], hi=iv[1];
-  // 自助法只反映"抽样带来的抖动"，反映不了"我们选的那条曲线形状本身可能不对"。
-  // 单字玩法一个段只有几题、更依赖外推，这层余量留大一点（数值是跑模拟标定的）。
+  // 自助法只反映"抽样带来的抖动"，反映不了"范围内那几个空段插得对不对"。
+  // 单字玩法一轮只覆盖五六关、更依赖插值，这层余量留大一点（数值是跑模拟标定的）。
   var pad=Math.round(est*((s.mode==='sentence')?0.02:0.06));
   lo-=pad; hi+=pad;
   var starLevel=0;
@@ -762,4 +783,4 @@ function levelProgress(s){
 }
 
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, FIT_BMIN, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, BLEND_N, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, BOOT_N, randn, pointsOf, fitPoints, fitCurve, totalOf, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };
