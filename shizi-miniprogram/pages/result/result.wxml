@@ -9,6 +9,16 @@
     </view>
     <view class="muted leveltext">{{levelText}}</view>
 
+    <!-- 一场只测十来题：数字怎么来的、下一轮会更准，都要跟家长说清楚 -->
+    <view wx:if="{{accumText}}" class="topnote">
+      <view class="tn-t">第 {{r.rounds}} 轮 · 累计 {{r.totalN}} 题的证据</view>
+      <view class="tn-b">{{accumText}}</view>
+    </view>
+    <view wx:if="{{roughText}}" class="topnote">
+      <view class="tn-t">第一轮，先看个大概</view>
+      <view class="tn-b">{{roughText}}</view>
+    </view>
+
     <!-- 全对：这不是精确值，而是"下限"，得跟家长说清楚 -->
     <view wx:if="{{topOut}}" class="topnote">
       <view class="tn-t">全部答对，字表测到顶了</view>

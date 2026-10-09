@@ -243,11 +243,16 @@ Page({
   },
   pickMode: function (e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
 
-  /* ---- 开始测试 ---- */
+  /* ---- 开始测试 ----
+     带上这个小朋友上一轮累积的证据：题量少，靠跨轮累积把精度补回来 */
   start: function () {
     this.saveForm();
     var p = app.profile();
-    var session = E.newSession({ name: p.name, age: p.age, mode: this.data.mode });
+    var mode = this.data.mode;
+    var session = E.newSession({
+      name: p.name, age: p.age, mode: mode,
+      prior: store.getPrior(mode)
+    });
     app.globalData.session = session;
     wx.navigateTo({ url: '/pages/test/test' });
   },

@@ -59,12 +59,18 @@ Page({
       patch.q = { type: 'sentence', level: q.level, cells: this.buildCells(q.sen.t, {}) };
     } else {
       var lv = E.LEVELS[q.level - 1];
-      if (s.phase === 'stair' && s.shownLevel && q.level > s.shownLevel) {
+      /* 升温提示：热身结束后的第一题如果直接从高关开始，说明是接着上一轮的分界测的 */
+      var stairFirst = (s.phase === 'stair' && !s._stairSeen);
+      if (stairFirst) s._stairSeen = 1;
+      var tip = '';
+      if (stairFirst && q.level >= 3) tip = '接着上次，从第 ' + q.level + ' 关开始';
+      else if (!stairFirst && s.shownLevel && q.level > s.shownLevel) tip = '升到第 ' + q.level + ' 关啦！';
+      if (tip) {
         patch.fbCls = 'info';
-        patch.fbText = '升到第 ' + q.level + ' 关啦！';
+        patch.fbText = tip;
         var that = this;
         setTimeout(function () {
-          if (that.data.fbText === '升到第 ' + q.level + ' 关啦！') that.setData({ fbText: '' });
+          if (that.data.fbText === tip) that.setData({ fbText: '' });
         }, 900);
       }
       s.shownLevel = q.level;
@@ -243,8 +249,12 @@ Page({
     if (!s) return;
     var r = E.computeResult(s);
 
-    /* 这次认对的字记到豆豆账上 */
-    var pe = E.pandaEarn(store.pandaTotal(), s.earned || 0);
+    /* 把这一轮的证据折价存起来，下一轮开测时带进去（一场题少，精度靠跨轮累积补） */
+    var mc = E.priorMerge(s);
+    store.setPrior(s.mode, E.priorTrim(mc.asked, mc.correct, (s.priorRounds || 0) + 1));
+
+    /* 这次认对的字记到豆豆账上（一场题少，每个字按 EARN_RATE 点算，长大节奏跟以前持平） */
+    var pe = E.pandaEarn(store.pandaTotal(), (s.earned || 0) * E.EARN_RATE);
     store.pandaSetTotal(pe.after);
     s.earned = 0;
 

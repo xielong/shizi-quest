@@ -11,6 +11,7 @@ Page({
     name: '', shownEst: 0,
     r: null, starStars: [], levelText: '',
     topOut: false, estWord: '约',
+    accumText: '', roughText: '',
     pandaText: '', panda: [], sceneSrc: '', sceneTag: '', snow: [],
     parts: [], scenes: [], worldNote: '',
     bars: [], barsNote: '',
@@ -37,6 +38,16 @@ Page({
     var howDone = isSent
       ? ('共读了 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字，其中 ' + r.correctTotal + ' 个认识')
       : ('共做 ' + r.count + ' 题、认识 ' + r.correctTotal + ' 题');
+    /* 跨轮累积：这一场题少，数字是"这一轮 + 前面几轮"一起算出来的，得跟家长讲清楚 */
+    var priorN = r.priorN || 0;
+    var accumText = priorN > 0
+      ? ('这是第 ' + (r.rounds || 2) + ' 轮。一场只出十来题，免得孩子坐不住；'
+         + '所以上面这个数字是把「这一轮 ' + r.count + ' 题」和「前面攒下的 ' + priorN + ' 题」合起来算的。')
+      : '';
+    var roughText = priorN > 0
+      ? ''
+      : ('这是第一轮摸底，一共才 ' + r.count + ' 题，先看个大概就好。'
+         + '用同一种玩法再玩一两轮，前面的证据会累加进来，数字会稳很多。');
     var levelText;
     if (topOut) {
       levelText = '全部答对！一路闯到最高难度（' + E.LEVELS[E.LEVELS.length - 1].name + '），' + howDone;
@@ -76,8 +87,8 @@ Page({
       };
     });
     var barsNote = isSent
-      ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。没测到的难度段按曲线少量计入，不会直接算成 0。'
-      : '颜色越长表示这一段的字认识得越多；本次没测到的难度段按"认识率曲线"少量计入，不会直接算成 0。';
+      ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。这里把前面几轮的证据也一起算进来了，所以题数可能比这一轮做的多。没测到的难度段按曲线少量计入，不会直接算成 0。'
+      : '颜色越长表示这一段的字认识得越多；题数是"这一轮 + 前面几轮"合起来的（一场题少，靠多轮累积看趋势）。本次没测到的难度段按"认识率曲线"少量计入，不会直接算成 0。';
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {
@@ -92,6 +103,7 @@ Page({
       levelText: levelText,
       topOut: topOut,
       estWord: topOut ? '至少' : '约',
+      accumText: accumText, roughText: roughText,
       pandaText: pandaText,
       panda: P.layers(total, 'front'),
       sceneSrc: P.sceneImage(total),
@@ -152,6 +164,7 @@ Page({
     var isSent = r.mode === 'sentence';
     var txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (r.topOut ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
       + '玩法：' + E.modeName(r.mode) + '，' + (isSent ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字') : ('共 ' + r.count + ' 题'))
+      + (r.priorN > 0 ? ('（第 ' + r.rounds + ' 轮，把前面几轮攒的 ' + r.priorN + ' 题也一起算了）') : '')
       + '，通过 ' + r.starLevel + ' 星难度。' + (r.topOut ? '（全部答对，测到字表上限）' : '') + E.todayStr();
     var that = this;
     wx.setClipboardData({
@@ -163,7 +176,10 @@ Page({
   again: function () {
     var profile = app.profile();
     var r = this.data.r;
-    var session = E.newSession({ name: profile.name, age: profile.age, mode: r.mode });
+    var session = E.newSession({
+      name: profile.name, age: profile.age, mode: r.mode,
+      prior: store.getPrior(r.mode)
+    });
     app.globalData.session = session;
     wx.redirectTo({ url: '/pages/test/test' });
   },

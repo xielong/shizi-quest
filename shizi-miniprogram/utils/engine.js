@@ -157,26 +157,34 @@ var FIT_BMIN = 0.4, FIT_BMAX = 3.0;
         用曲线补齐没测到的难度段，再 Σ（认识率 × 该段字数）。
    ========================================================================= */
 /* 出题参数（下面这几个值都是跑蒙特卡洛模拟标定出来的）
-   2026-10 调小过一轮：小朋友反映"出的字太多"。标定结论——
-     读一读/找一找 28 题 → 21 题（再往下砍偏差会从 7% 跳到 19%，不划算）
-     读句子       26 句 → 14 句（句子一句能覆盖十来个字，几乎不损失精度） */
+   2026-10 又砍了一轮：家长反映"一次要答几十道，孩子坐不住"。
+   标定结论——单场砍到 10 题上下（原来 17~23 题）。精度不再靠"一场多测"，
+   而是靠 SECTION: PRIOR 的跨轮累积补回来（每轮少做点，多做几轮）。
+   一块从 3 题缩成 2 题：爬梯子每关只花 2 题，同样 10 题能爬到更高、
+   更容易够到孩子的真实分界（3 题一块时 2300 字的孩子第一轮会高估 80%）。 */
 
-var WARM_N=2, BLOCK=3, PASS_NEED=2;
+var WARM_N=2, BLOCK=2, PASS_NEED=1;
 
-var TOPN=4, TOP_ABOVE=3, TOP_MAX=10, MAX_Q=24;
-/* 折返夹住分界后，最少攒到这么多题才转复核（原来 18） */
-var STAIR_MIN_Q=13;
+var TOPN=3, TOP_ABOVE=2, TOP_MAX=4, MAX_Q=12;
+/* 折返夹住分界后，最少攒到这么多题才转复核（原来 13） */
+var STAIR_MIN_Q=7;
+/* 折返几次就算"分界夹住"了。跨轮累积以后，一轮夹住一次就够——
+   下一轮会从这次的分界接着测（见 newSession 的起测关） */
+var REV_NEED=1;
 /* 实测认识率的权重 = n/(n+BLEND_N)：题越多越信实测，题少就更多听曲线 */
 
 var BLEND_N=2;
 
+/* 一场题少，每个字给的成长值就按 2 点算，豆豆长大的节奏跟以前持平 */
+var EARN_RATE=2;
+
 /* 句子认读模式的参数 */
 
-var SENT_WARM=2;    // 暖场：前几句先挑最浅的句子
+var SENT_WARM=1;    // 暖场：前几句先挑最浅的句子
 
-var SENT_MAX=14;    // 最多读多少句（家长随时可以提前结束）
+var SENT_MAX=7;     // 最多读多少句（原来 14；家长随时可以提前结束）
 
-var SENT_CEIL=10;   // 到这么多句后，若最高档也认得不差，就早点收工
+var SENT_CEIL=5;    // 到这么多句后，若最高档也认得不差，就早点收工
 
 var SENT_SKIP=0.35; // 已经测过的字，再次出现的价值折扣
 
@@ -195,6 +203,62 @@ function wilson(k,n,z){
   return [clamp(c-hw,0,1), clamp(c+hw,0,1)];
 }
 
+/* =========================================================================
+   SECTION: PRIOR — 跨轮累积（把上一轮的证据折价带进这一轮）
+
+   一场只做 10 题左右，孩子坐得住，但 10 道题的估算会飘。
+   所以每轮结束时把"每段几题、对了几个"折价存下来，下一轮和本轮证据合起来算：
+     · 单轮题少（孩子不累）
+     · 第二、第三轮开始，识字量数字就稳下来，而且跟着新表现慢慢走
+     · 起测关直接用上一轮的分界，省掉"从第 2 关重新爬上去"的那几道题
+
+   折价系数 DECAY=0.55：约等于只保留最近两轮的活证据；
+   每段上限 PRIOR_CAP=6 题：防止某一档被历史压死、后面再也不更新。
+
+   存的是一个普通对象 {asked:{关:题数}, correct:{关:对数}}，跟存储层无关——
+   网页版放 localStorage、小程序放 wx storage，都由调用方负责（engine 保持纯函数）。
+   ========================================================================= */
+
+var DECAY=0.55, PRIOR_CAP=6;
+
+function priorCount(p){
+  var n=0, k, a=(p&&p.asked)||{};
+  for(k in a){ if(Object.prototype.hasOwnProperty.call(a,k)) n+=a[k]||0; }
+  return n;
+}
+/* 一轮结束：把"合起来的总证据"折价成下一轮的先验。
+   rounds 记的是"这份证据一共攒了几轮"，只用来给家长看，不参与计算 */
+function priorTrim(asked, correct, rounds){
+  asked=asked||{}; correct=correct||{};
+  var A={}, C={};
+  for(var i=1;i<=LEVELS.length;i++){
+    var n0=asked[i]||0;
+    var n=Math.round(n0*DECAY);
+    if(n>PRIOR_CAP) n=PRIOR_CAP;
+    if(n<=0) continue;
+    A[i]=n;
+    C[i]=Math.round(n0?((correct[i]||0)/n0)*n:0);
+  }
+  return {asked:A, correct:C, rounds:Math.max(1,rounds||1)};
+}
+/* 先验 + 本轮实测 = 这一轮拿来估算的全部证据 */
+function priorMerge(s){
+  var A={}, C={}, k, p=s.prior;
+  if(p&&p.asked){
+    for(k in p.asked){
+      if(!Object.prototype.hasOwnProperty.call(p.asked,k)) continue;
+      A[k]=p.asked[k]||0;
+      C[k]=(p.correct&&p.correct[k])||0;
+    }
+  }
+  for(var i=1;i<=LEVELS.length;i++){
+    if(!s.asked[i]) continue;
+    A[i]=(A[i]||0)+s.asked[i];
+    C[i]=(C[i]||0)+s.correct[i];
+  }
+  return {asked:A, correct:C};
+}
+
 function newSession(opt){
   opt=opt||{};
   var mode=opt.mode||'read';
@@ -208,6 +272,14 @@ function newSession(opt){
     q:null, done:false, stars:0, count:0, stopReason:'', shownLevel:0,
     earned:0, pandaShown:0
   };
+  /* 上一轮折价带过来的证据（没有就是第一轮） */
+  s.prior=(opt.prior&&opt.prior.asked)?opt.prior:null;
+  s.priorN=priorCount(s.prior);
+  s.priorRounds=(s.prior&&s.prior.rounds)||0;
+  s.priorBoundary=s.prior?boundaryOfCounts(s.prior.asked, s.prior.correct, mode):0;
+  /* 起测关：上一轮的分界下面一关。孩子这次的证据会直接落在分界附近，
+     不用再从第 2 关一关一关爬上去 */
+  s.startLevel=(s.priorBoundary>0)?clamp(s.priorBoundary-1,2,LEVELS.length):2;
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
@@ -249,16 +321,21 @@ function rateAt(s,i){
   return clamp(((s.correct[i]||0)/n-guess)/(1-guess),0,1);
 }
 /* 分界：第一个"认识率低于 50%"的难度段。
-   返回 LEVELS.length+1 表示测过的关全都过关（分界在最高关之上）。 */
-
-function findBoundary(s){
+   返回 LEVELS.length+1 表示测过的关全都过关（分界在最高关之上）。
+   拆成 boundaryOfCounts 是因为"上一轮的证据"（prior）也要用同一套口径算分界 */
+function boundaryOfCounts(asked, correct, mode){
+  var guess=(mode==='listen')?0.25:0;
   for(var i=1;i<=LEVELS.length;i++){
-    var r=rateAt(s,i);
-    if(r===null) continue;
+    var n=(asked&&asked[i])||0;
+    if(!n) continue;
+    var k=(correct&&correct[i])||0;
+    var r=clamp(((k/n)-guess)/(1-guess),0,1);
     if(r<0.5) return i;
   }
   return LEVELS.length+1;
 }
+
+function findBoundary(s){ return boundaryOfCounts(s.asked, s.correct, s.mode); }
 /* 复核阶段还差哪一关的题：返回关号，都不用补了就返回 0
    分界很靠前（小朋友认识的字很少）时，上面只摸 3 题，别让他连做一堆超纲字 */
 
@@ -293,11 +370,19 @@ function stairDecide(s){
 
   if(pass){
     s.floorFails=0;
-    // 一组三题全对说明这一关太轻松，直接往上跳两关：题量省下来，
+    // 一组全对说明这一关太轻松，直接往上跳两关：题量省下来，
     // 也更容易摸到高难度那几关（不然题量上限一到就停在半路，估算只能靠外推）
     var jump=aced?2:1, next=c+jump;
     if(next>LEVELS.length) next=LEVELS.length;
-    if(next===c){ s.stopReason='ceiling'; s.done=true; return; }  // 最高关也全过：测到顶了
+    if(next===c){
+      /* 已经站在最高关、又过关了：不再往上跳，直接转回头复核。
+         这里不能顺手判成"测到顶"——一组两题只对一题也算过关（PASS_NEED=1），
+         那只是分界压在最高关，不等于他真的认识这 5000 个字。
+         "测到顶"由 computeResult 按"一道没错 + 最高关全对"来认定。 */
+      s.curLevel=c;
+      s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s);
+      return;
+    }
     s.curLevel=next;
   }else{
     if(c<=1){
@@ -310,7 +395,7 @@ function stairDecide(s){
     }
   }
   // 已经一上一下折返过、且题量够了 → 分界夹住，转入回头复核
-  if(s.reversals>=2 && s.count>=STAIR_MIN_Q && s.phase==='stair'){
+  if(s.reversals>=REV_NEED && s.count>=STAIR_MIN_Q && s.phase==='stair'){
     s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s);
   }
 }
@@ -322,9 +407,12 @@ function stairDecide(s){
    ========================================================================= */
 
 function sentTarget(s){
-  if(s.sentCount<SENT_WARM) return 2;             // 暖场：先来几句最浅的
+  /* 起测台阶：没有历史就从第 2 档开始；有历史就直接从"上次分界下面两级"起步，
+     省掉前面那几句浅句子（句子一句能覆盖十来个字，站得高一点不亏） */
+  var base=(s.priorBoundary>0)?clamp(s.priorBoundary-2,1,LEVELS.length):2;
+  if(s.sentCount<SENT_WARM) return base;
   var b=findBoundary(s);                          // 分界（第一个不过关的等级）
-  var step=2+Math.floor(s.sentCount/2);           // 台阶：每两句最多往上挪一级
+  var step=base+Math.floor(s.sentCount/2);        // 台阶：每两句最多往上挪一级
   return clamp(Math.min(b,step),1,LEVELS.length);
 }
 
@@ -424,7 +512,7 @@ function answerQuestion(s,correct){
 
   if(s.phase==='warmup'){
     s.warmupLeft--;
-    if(s.warmupLeft<=0){ s.phase='stair'; s.curLevel=2; s.blockAsked=0; s.blockCorrect=0; }
+    if(s.warmupLeft<=0){ s.phase='stair'; s.curLevel=s.startLevel||2; s.blockAsked=0; s.blockCorrect=0; }
   }else if(s.phase==='stair'){
     s.blockAsked++;
     if(correct) s.blockCorrect++;
@@ -449,9 +537,10 @@ function randn(){ return (Math.random()+Math.random()+Math.random()+Math.random(
 
 function pointsOf(s){
   var guess=(s.mode==='listen')?0.25:0;
+  var mc=priorMerge(s);          // 先验 + 本轮实测（见 SECTION: PRIOR）
   var pts=[];
   for(var i=1;i<=LEVELS.length;i++){
-    var n=s.asked[i]||0, k=s.correct[i]||0;
+    var n=mc.asked[i]||0, k=mc.correct[i]||0;
     if(!n) continue;
     var pr=clamp(k/n,BOOT_SEED_FLOOR,1-BOOT_SEED_FLOOR);
     pts.push({i:i, n:n, k:k,
@@ -548,15 +637,21 @@ function computeResult(s){
   s.answers.forEach(function(a){
     if(!a.correct){ misses++; if(wrong.indexOf(a.ch)<0) wrong.push(a.ch); }
   });
-  // 一道都没答错：说明一路过关斩将爬到了字表顶端，这时的估算是"下限"而不是精确值
-  // （字表一共就 5000 字，他真正的水平可能还在上面），结果页要照这个口径说
-  var topOut=(misses===0 && s.count>0);
+  /* 一道都没答错 → 说明一路过关斩将爬到了顶端。但"本轮全对"不等于"爬到顶"：
+     一轮只出 10 题左右，题量一到就停了，这时候上面那几关根本还没测过，
+     不能说成"至少 5000"。所以必须真的测到最高关、且最高关也全对，才算测到顶。 */
+  var topLv=LEVELS.length, topAsked=s.asked[topLv]||0;
+  var topAced=(topAsked>0 && (s.correct[topLv]||0)>=topAsked);
+  var topOut=(misses===0 && s.count>0 && topAced);
   return {
     est:est10, lo:Math.min(lo10,est10), hi:Math.min(5000,Math.max(hi10,est10)),
     starLevel:starLevel, levels:levels, wrong:wrong,
     count:s.count, askedTotal:s.count, correctTotal:s.stars,
     stopReason:s.stopReason, mode:s.mode, sentCount:s.sentCount||0,
-    distinct:s.count, misses:misses, topOut:topOut
+    distinct:s.count, misses:misses, topOut:topOut,
+    /* 跨轮累积的口径：这一轮做了多少、之前累计了多少、这是第几轮 */
+    sessCount:s.count, priorN:s.priorN||0, totalN:s.count+(s.priorN||0),
+    rounds:(s.priorRounds||0)+1, topTested:topAced
   };
 }
 
@@ -667,4 +762,4 @@ function levelProgress(s){
 }
 
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, FIT_BMIN, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, BLEND_N, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, BOOT_N, randn, pointsOf, fitPoints, fitCurve, totalOf, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, FIT_BMIN, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, BLEND_N, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, BOOT_N, randn, pointsOf, fitPoints, fitCurve, totalOf, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };

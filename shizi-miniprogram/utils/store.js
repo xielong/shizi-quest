@@ -6,6 +6,7 @@
      shizi_panda_v1::p1             该小朋友累计认对字数（熊猫养成进度）
      shizi_world_v1::p1             该小朋友已住过的场景数（四季搬家进度）
      shizi_history_v1::p1           该小朋友的历次测试记录
+     shizi_prior_v1::p1             该小朋友跨轮累积的答题证据（按玩法分开）
 
    兼容：小程序最早那一版（以及网页版）把进度直接存在不带后缀的
    shizi_quest_panda_v1 / _world_v1 / _history_v1 里。第一次运行时会把这些
@@ -17,6 +18,7 @@ var PLAYERS_KEY = 'shizi_players_v1';
 var BASE_PANDA = 'shizi_quest_panda_v1';
 var BASE_SCENE = 'shizi_quest_world_v1';
 var BASE_HIST = 'shizi_quest_history_v1';
+var BASE_PRIOR = 'shizi_quest_prior_v1';   // 跨轮累积的答题证据（按玩法分开）
 var LEGACY_PROFILE = 'shizi_quest_profile_v1';
 
 function safeGet(key) {
@@ -125,11 +127,12 @@ function removePlayer(id) {
   return true;
 }
 
-/* 清空某个小朋友的进度（豆豆、场景、成长记录），保留这个小朋友本身 */
+/* 清空某个小朋友的进度（豆豆、场景、成长记录、累积证据），保留这个小朋友本身 */
 function clearPlayerData(id) {
   safeDel(keyOf(BASE_PANDA, id));
   safeDel(keyOf(BASE_SCENE, id));
   safeDel(keyOf(BASE_HIST, id));
+  safeDel(keyOf(BASE_PRIOR, id));
 }
 
 /* ============ 下面这些读写的都是"当前小朋友"的数据 ============ */
@@ -152,6 +155,24 @@ function sceneSeen() {
   return isNaN(v) ? 0 : Math.max(0, v);
 }
 function sceneSetSeen(n) { safeSet(keyOf(BASE_SCENE, curId()), String(Math.max(0, n | 0))); }
+
+/* ---- 跨轮累积的答题证据 ----
+   一场只做 10 题左右，光靠这一场估不准；所以每轮结束把"每关几题、对几题"
+   折价存下来（E.priorTrim），下一轮开测时再喂回去（E.newSession 的 prior）。
+   按玩法分开存：读一读、找一找、读句子三套题不一样，证据不能混。 */
+function loadPriorAll() {
+  var v = parse(safeGet(keyOf(BASE_PRIOR, curId())), {});
+  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+}
+function getPrior(mode) {
+  var p = loadPriorAll()[mode || 'read'];
+  return (p && p.asked) ? p : null;
+}
+function setPrior(mode, p) {
+  var all = loadPriorAll();
+  all[mode || 'read'] = p || { asked: {}, correct: {} };
+  safeSet(keyOf(BASE_PRIOR, curId()), JSON.stringify(all));
+}
 
 /* ---- 成长记录 ---- */
 function loadHistory() {
@@ -183,6 +204,7 @@ module.exports = {
   clearPlayerData: clearPlayerData,
   pandaTotal: pandaTotal, pandaSetTotal: pandaSetTotal, pandaAdd: pandaAdd,
   sceneSeen: sceneSeen, sceneSetSeen: sceneSetSeen,
+  getPrior: getPrior, setPrior: setPrior,
   loadHistory: loadHistory, saveHistory: saveHistory, pushRecord: pushRecord,
   getProfile: getProfile, setProfile: setProfile
 };
