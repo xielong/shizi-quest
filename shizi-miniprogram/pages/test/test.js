@@ -43,14 +43,14 @@ Page({
     var s = this.s;
     if (!s) return;
     var q = E.nextQuestion(s);
-    if (!q) { this.finish(); return; }
+    if (!q) { this.wrapUp(); return; }
     this.locked = false;
     this._qKey = (this._qKey || 0) + 1;
 
     var patch = { qKey: this._qKey, prog: Math.round(E.levelProgress(s) * 1000) / 10 };
 
     if (s.mode === 'sentence') {
-      patch.lvChip = '第 ' + (s.sentCount + 1) + ' / ' + E.SENT_MAX + ' 句';
+      patch.lvChip = '第 ' + (s.sentCount + 1) + ' / ' + (s.sentCap || E.SENT_MAX) + ' 句';
       patch.progText = '读句子：看看这句话认识几个字';
       patch.qText = '测到 ' + s.count + ' 个字';
       patch.prompt = '请小朋友把这句话读出来';
@@ -78,7 +78,7 @@ Page({
       patch.progText = s.phase === 'warmup' ? '热身中，先认识几个老朋友'
         : (s.phase === 'topup' ? ('回头复核：再把第 ' + q.level + ' 关确认几题')
                                : ('正在挑战：' + lv.name));
-      patch.qText = '已做 ' + s.count + ' 题 · 最多 ' + E.MAX_Q + ' 题';
+      patch.qText = '已做 ' + s.count + ' 题 · 最多 ' + (s.cap || E.MAX_Q) + ' 题';
       if (s.mode === 'read') {
         patch.prompt = '请小朋友把这个字读出来';
         patch.q = { type: 'read', ch: q.ch, level: q.level };
@@ -243,17 +243,48 @@ Page({
     this.setData({ mini: P.layers(store.pandaTotal() + (this.s.earned || 0), this._facing) });
   },
 
+  /* ---------- 这一轮的额度用完了 ----------
+     样本够（累计测满 MIN_TESTED 个字）就正常结算；
+     不够就直说"还需要再多答几道题"，家长同意就接着这轮继续出题
+     （不重开一轮：先验不动，做完一起结算；也最多接三次，别把孩子困住） */
+  wrapUp: function () {
+    var s = this.s, that = this;
+    if (!s) return;
+    var r = E.computeResult(s);
+    this._askMore = this._askMore || 0;
+    if (r.enough || r.topOut || this._askMore >= 3) { this.finish(); return; }
+    this._askMore++;
+    /* 就差临门一脚（1~2 个字）：别为这点事弹窗打扰家长，直接接着出题 */
+    if (r.needN <= 2) { E.extendSession(s, r.needN); this.step(); return; }
+    wx.showModal({
+      title: '还差 ' + r.needN + ' 个字才给分数',
+      content: '已经测了 ' + r.testedN + ' 个字，至少要 ' + r.minTested + ' 个才算数——'
+             + '题太少的话，算出来的数字没有意义。再答几道就够了，继续吗？',
+      confirmText: '继续答',
+      cancelText: '先到这儿',
+      success: function (res) {
+        if (res.confirm && that.s) {
+          E.extendSession(that.s, r.needN);
+          that.step();
+        } else {
+          that.finish();
+        }
+      }
+    });
+  },
+
   /* ---------- 结算 ---------- */
   finish: function () {
     var s = this.s;
     if (!s) return;
     var r = E.computeResult(s);
 
-    /* 把这一轮的证据折价存起来，下一轮开测时带进去（一场题少，精度靠跨轮累积补） */
-    var mc = E.priorMerge(s);
-    store.setPrior(s.mode, E.priorTrim(mc.asked, mc.correct, (s.priorRounds || 0) + 1));
+    /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
+       （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
+    store.setPrior(s.mode, E.priorNext(s));
 
-    /* 这次认对的字记到豆豆账上（一场题少，每个字按 EARN_RATE 点算，长大节奏跟以前持平） */
+    /* 这次认对的字记到豆豆账上（一场题少，每个字按 EARN_RATE 点算，长大节奏跟以前持平）
+       注意：样本不够、不出分数的时候，豆豆照样长大——孩子认真答了就该有奖励 */
     var pe = E.pandaEarn(store.pandaTotal(), (s.earned || 0) * E.EARN_RATE);
     store.pandaSetTotal(pe.after);
     s.earned = 0;
@@ -267,12 +298,15 @@ Page({
       store.sceneSetSeen(unlocked);
     }
 
-    /* 历史记录（字段与网页版一致） */
-    store.pushRecord({
-      date: E.todayStr(), ts: Date.now(), name: s.name, age: s.age, mode: s.mode,
-      est: r.est, lo: r.lo, hi: r.hi, stars: r.starLevel,
-      count: r.count, correct: r.correctTotal, sent: r.sentCount || 0
-    });
+    /* 历史记录（字段与网页版一致）。样本不够、不出分数的那次不入记录，
+       免得成长记录里出现一条没有分数的数据 */
+    if (r.enough) {
+      store.pushRecord({
+        date: E.todayStr(), ts: Date.now(), name: s.name, age: s.age, mode: s.mode,
+        est: r.est, lo: r.lo, hi: r.hi, stars: r.starLevel,
+        count: r.count, correct: r.correctTotal, sent: r.sentCount || 0
+      });
+    }
 
     app.globalData.lastResult = r;
     app.globalData.lastFresh = {
@@ -292,10 +326,17 @@ Page({
       wx.navigateBack();
       return;
     }
+    /* 测得太少就不给分数，所以这时候别问"要不要出结果"，
+       直接告诉家长"还要再多答几道"（不拦着他退出，只是说明清楚） */
+    var tested = E.testedTotal(s), enough = tested >= E.MIN_TESTED;
     wx.showModal({
-      title: '退出测试',
-      content: '已经测的 ' + s.count + ' 个字也会算出结果，确定退出吗？',
-      confirmText: '出结果', cancelText: '继续测',
+      title: enough ? '退出测试' : '还要再多答几道题',
+      content: enough
+        ? ('已经测的 ' + s.count + ' 个字会算出结果，确定退出吗？')
+        : ('一共才测了 ' + tested + ' 个字，至少测满 ' + E.MIN_TESTED + ' 个才给分数，'
+           + '还差 ' + (E.MIN_TESTED - tested) + ' 个。现在退出不会有分数，要不要再答几道？'),
+      confirmText: enough ? '出结果' : '还是要退出',
+      cancelText: enough ? '继续测' : '再答几道',
       success: function (res) { if (res.confirm) that.finish(); }
     });
   },

@@ -1,36 +1,48 @@
 <view class="page">
   <!-- 识字量 -->
   <view class="card hero">
-    <view class="hero-title">{{name}} 的识字量{{estWord}}</view>
-    <view class="hero-num"><text class="big">{{shownEst}}</text><text class="unit">字</text></view>
-    <view class="rng">合理区间 {{r.lo}} ~ {{r.hi}} 字</view>
-    <view class="starrow">
-      <text wx:for="{{starStars}}" wx:key="i" class="st {{item.on?'on':''}}">★</text>
-    </view>
+    <view class="hero-title">{{heroTitle}}</view>
+
+    <block wx:if="{{enough}}">
+      <view class="hero-num"><text class="big">{{shownEst}}</text><text class="unit">字</text></view>
+      <view class="rng">合理区间 {{r.lo}} ~ {{r.hi}} 字</view>
+      <view class="starrow">
+        <text wx:for="{{starStars}}" wx:key="i" class="st {{item.on?'on':''}}">★</text>
+      </view>
+    </block>
+
     <view class="muted leveltext">{{levelText}}</view>
 
-    <!-- 一场只测十来题：数字怎么来的、下一轮会更准，都要跟家长说清楚 -->
-    <view wx:if="{{accumText}}" class="topnote">
-      <view class="tn-t">第 {{r.rounds}} 轮 · 累计 {{r.totalN}} 题的证据</view>
-      <view class="tn-b">{{accumText}}</view>
-    </view>
-    <view wx:if="{{roughText}}" class="topnote">
-      <view class="tn-t">第一轮，先看个大概</view>
-      <view class="tn-b">{{roughText}}</view>
+    <!-- 样本不够：不给分数，只说还需要再多答几道 -->
+    <view wx:if="{{!enough}}" class="topnote">
+      <view class="tn-t">还需要再多答几道题</view>
+      <view class="tn-b">{{shortText}}</view>
     </view>
 
-    <!-- 全对：这不是精确值，而是"下限"，得跟家长说清楚 -->
-    <view wx:if="{{topOut}}" class="topnote">
-      <view class="tn-t">全部答对，字表测到顶了</view>
-      <view class="tn-b">这套字表一共 5000 个字，他从最简单的第一关一路全对闯到了最后一关，说明这张表已经量不出来了，所以上面写的是「至少」。</view>
-      <view class="tn-b">如果这个数字看着偏高，可以再测一次、判分严格些：比如他要犹豫好几秒才想起来，就算「不认识」。这样测出来的分界才清楚。</view>
-    </view>
+    <block wx:if="{{enough}}">
+      <!-- 一场只测十来题：数字怎么来的、下一轮会更准，都要跟家长说清楚 -->
+      <view wx:if="{{accumText}}" class="topnote">
+        <view class="tn-t">第 {{r.rounds}} 轮 · 累计 {{r.totalN}} 题的证据</view>
+        <view class="tn-b">{{accumText}}</view>
+      </view>
+      <view wx:if="{{roughText}}" class="topnote">
+        <view class="tn-t">第一轮，先看个大概</view>
+        <view class="tn-b">{{roughText}}</view>
+      </view>
 
-    <!-- 没答错过但没测到顶：数字只是下限，别让家长当成精确值 -->
-    <view wx:if="{{noMiss}}" class="topnote">
-      <view class="tn-t">这轮没答错，数字是「下限」</view>
-      <view class="tn-b">{{noMissText}}</view>
-    </view>
+      <!-- 全对：这不是精确值，而是"下限"，得跟家长说清楚 -->
+      <view wx:if="{{topOut}}" class="topnote">
+        <view class="tn-t">全部答对，字表测到顶了</view>
+        <view class="tn-b">这套字表一共 5000 个字，他从最简单的第一关一路全对闯到了最后一关，说明这张表已经量不出来了，所以上面写的是「至少」。</view>
+        <view class="tn-b">如果这个数字看着偏高，可以再测一次、判分严格些：比如他要犹豫好几秒才想起来，就算「不认识」。这样测出来的分界才清楚。</view>
+      </view>
+
+      <!-- 没答错过但没测到顶：数字只是下限，别让家长当成精确值 -->
+      <view wx:if="{{noMiss}}" class="topnote">
+        <view class="tn-t">这轮没答错，数字是「下限」</view>
+        <view class="tn-b">{{noMissText}}</view>
+      </view>
+    </block>
   </view>
 
   <!-- 豆豆长大了多少 -->
@@ -62,8 +74,8 @@
     <view class="muted" style="margin-top:18rpx">每认对一些字，豆豆就长出一个新零件、还会搬去新的地方住，成绩会一直存着——下次来玩他还在，而且会更完整。</view>
   </view>
 
-  <!-- 各难度段表现 -->
-  <view class="card">
+  <!-- 各难度段表现：样本不够时不显示（几道题画出来的条形图没有意义） -->
+  <view wx:if="{{enough}}" class="card">
     <view class="h3">各难度段表现</view>
     <view class="bars">
       <view wx:for="{{bars}}" wx:key="i" class="barrow">
@@ -77,7 +89,7 @@
   </view>
 
   <!-- 同龄参考 -->
-  <view class="card">
+  <view wx:if="{{enough}}" class="card">
     <view class="h3">和同龄小朋友比一比</view>
     <view class="ref">
       <view wx:for="{{refRows}}" wx:key="i" class="refrow {{item.self?'self':''}}">
@@ -87,8 +99,8 @@
     <view class="muted" style="margin-top:14rpx">参考区间为常见经验值，仅供家长心里有个大致坐标，不是标准答案。</view>
   </view>
 
-  <!-- 生字复习 -->
-  <view class="card">
+  <!-- 生字复习（样本不够时，只有真的测出不会的字才显示） -->
+  <view wx:if="{{enough || wrong.length}}" class="card">
     <view class="h3">这些字还不认识</view>
     <view class="muted">把没认出来的字变成"新朋友"，下次见到就认识啦。别批评，一起念念就好。</view>
     <view class="wordchips" wx:if="{{wrong.length}}">
@@ -97,22 +109,23 @@
     <view class="muted" wx:else style="margin-top:12rpx">这次几乎没有不认识的字，太厉害了！</view>
   </view>
 
-  <!-- 奖状 -->
+  <!-- 奖状 / 下一步 -->
   <view class="card">
-    <view class="cert">
+    <view wx:if="{{enough}}" class="cert">
       <view class="t">识 字 小 勇 士</view>
       <view class="n">{{name}}</view>
       <view class="d">{{certMeta}}</view>
       <view class="cert-tip">豆豆说：你认识的字比上次又多啦！</view>
     </view>
+    <view wx:else class="muted center" style="margin-bottom:8rpx">这一次先不发奖状，等测够 {{r.minTested}} 个字再说——豆豆的成长值已经记上啦。</view>
     <view class="row" style="margin-top:26rpx;gap:18rpx">
-      <button class="btn warm" style="flex:1" bindtap="again">再玩一次</button>
+      <button class="btn warm" style="flex:1" bindtap="again">{{enough?'再玩一次':'接着再答几道'}}</button>
       <button class="btn ghost" style="flex:1" bindtap="goHome">回首页</button>
     </view>
     <view class="row" style="margin-top:18rpx;gap:18rpx">
-      <button class="btn mini" style="flex:1" bindtap="copyResult">{{copied?'已复制 ✓':'复制成绩发给家人'}}</button>
+      <button class="btn mini" style="flex:1" bindtap="copyResult">{{copied?'已复制 ✓':(enough?'复制成绩发给家人':'复制这次的情况')}}</button>
       <button class="btn mini" style="flex:1" bindtap="goHistory">看成长记录</button>
     </view>
-    <view class="muted center" style="margin-top:18rpx">想留个纪念？截屏这个页面就是一张奖状。</view>
+    <view class="muted center" style="margin-top:18rpx">{{enough?'想留个纪念？截屏这个页面就是一张奖状。':'答完接着测，数字出来就能发奖状啦。'}}</view>
   </view>
 </view>

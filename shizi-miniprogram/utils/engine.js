@@ -220,8 +220,9 @@ function priorCount(p){
   return n;
 }
 /* 一轮结束：把"合起来的总证据"折价成下一轮的先验。
-   rounds 记的是"这份证据一共攒了几轮"，只用来给家长看，不参与计算 */
-function priorTrim(asked, correct, rounds){
+   rounds 记的是"这份证据一共攒了几轮"、tested 记的是"累计测过多少个字"，
+   两个都只用来给家长看和判"样本够不够"，不参与识字量计算 */
+function priorTrim(asked, correct, rounds, tested){
   asked=asked||{}; correct=correct||{};
   var A={}, C={};
   for(var i=1;i<=LEVELS.length;i++){
@@ -232,7 +233,13 @@ function priorTrim(asked, correct, rounds){
     A[i]=n;
     C[i]=Math.round(n0?((correct[i]||0)/n0)*n:0);
   }
-  return {asked:A, correct:C, rounds:Math.max(1,rounds||1)};
+  return {asked:A, correct:C, rounds:Math.max(1,rounds||1), tested:Math.max(0,tested||0)};
+}
+/* 一轮结束时的收尾动作：先并（先验 + 本轮）、再折价，并把累计字数带上。
+   调用方一句 store.setPrior(mode, E.priorNext(s)) 就够。 */
+function priorNext(s){
+  var mc=priorMerge(s);
+  return priorTrim(mc.asked, mc.correct, (s.priorRounds||0)+1, testedTotal(s));
 }
 /* 先验 + 本轮实测 = 这一轮拿来估算的全部证据 */
 function priorMerge(s){
@@ -334,20 +341,22 @@ function findBoundary(s){ return boundaryOfCounts(s.asked, s.correct, s.mode); }
 
 function topupNext(s){
   var L=LEVELS.length, b=s.boundary;
-  var above=(b<=2)?3:TOP_ABOVE;
+  var boost=(s.topupBoost||0);                 /* 「接着再答几道」时放开的额度 */
+  var topn=TOPN+boost;
+  var above=((b<=2)?3:TOP_ABOVE)+boost;
   if(b<=1){
-    if((s.asked[1]||0)<TOPN) return 1;
-    if((s.asked[2]||0)<TOPN) return 2;
+    if((s.asked[1]||0)<topn) return 1;
+    if((s.asked[2]||0)<topn) return 2;
     if((s.asked[3]||0)<above) return 3;
     return 0;
   }
   if(b>L){
-    if((s.asked[L]||0)<TOPN) return L;
-    if((s.asked[L-1]||0)<TOPN) return L-1;
+    if((s.asked[L]||0)<topn) return L;
+    if((s.asked[L-1]||0)<topn) return L-1;
     return 0;
   }
-  if((s.asked[b]||0)<TOPN) return b;                     // 先把分界把关补足
-  if((s.asked[b-1]||0)<TOPN) return b-1;                 // 再把下面稳过的那关补足
+  if((s.asked[b]||0)<topn) return b;                     // 先把分界把关补足
+  if((s.asked[b-1]||0)<topn) return b-1;                 // 再把下面稳过的那关补足
   if(b+1<=L && (s.asked[b+1]||0)<above) return b+1;      // 上面再摸几题，摸摸尾巴
   if(b-2>=1 && (s.asked[b-2]||0)<3) return b-2;          // 小朋友年龄小，再往下垫一关
   return 0;
@@ -426,7 +435,7 @@ function pickSentence(s){
 }
 
 function nextSentence(s){
-  if(s.sentCount>=SENT_MAX){ s.stopReason='limit'; s.done=true; return null; }
+  if(s.sentCount>=(s.sentCap||SENT_MAX)){ s.stopReason='limit'; s.done=true; return null; }
   // 连最难的十星字都认下来了，再读下去也没多少新信息，早点收工
   var top=LEVELS.length;
   if(s.sentCount>=SENT_CEIL && (s.asked[top]||0)>=3 && (rateAt(s,top)||0)>=0.5){
@@ -466,7 +475,7 @@ function sentenceSeenCount(s){ return s.count||0; }
 function nextQuestion(s){
   if(s.done) return null;
   if(s.mode==='sentence') return nextSentence(s);
-  if(s.count>=MAX_Q){ s.stopReason='limit'; s.done=true; return null; }
+  if(s.count>=(s.cap||MAX_Q)){ s.stopReason='limit'; s.done=true; return null; }
 
   if(s.phase==='warmup'){
     s.q=makeQuestion(s,1);
@@ -482,7 +491,7 @@ function nextQuestion(s){
     }
   }
   if(s.phase==='topup'){
-    if(s.topupCount>=TOP_MAX){ s.stopReason='stable'; s.done=true; return null; }
+    if(s.topupCount>=(s.topupBudget||TOP_MAX)){ s.stopReason='stable'; s.done=true; return null; }
     s.boundary=findBoundary(s);
     var need=topupNext(s);
     if(!need){ s.stopReason='stable'; s.done=true; return null; }
@@ -565,6 +574,50 @@ function pointsOf(s){
 
 /* 实测范围之上每远一关打几折（只用于区间上沿，跑模拟标定的 /tmp/mp/bench7.js） */
 var EXTRAP_DECAY=0.6;
+
+/* =========================================================================
+   样本门槛 MIN_TESTED —— 测得太少就不给分数
+
+   只答对两三道题，就算按上面的口径"只折算测到的段"，算出来的也只是
+   "这两题所在的段除以题数"——数字本身没有意义（会小得离谱）。
+   所以定一个下限：**累计测满 MIN_TESTED 个字才出分数**，不够就在结果页
+   明说"还需要再多答几道题"，不显示任何数字。
+
+   一轮十来题、句子一句覆盖好几个字，所以：
+     · 读句子：一轮通常就能测到 40 个字上下 → 直接出分数
+     · 读一读/找一找：一轮 12 题 = 12 个字 → 第一轮不够，**第二轮累积起来就够**
+       （跨轮累积见 SECTION: PRIOR，`tested` 字段记的就是累计测过多少字）
+     · 例外：真的一路全对闯到最高关并答对 → 证据已经足够决定性，照样给分数
+   ========================================================================= */
+
+var MIN_TESTED=20;
+
+/* 累计测到多少个字 = 本轮 + 前面几轮（前面几轮记在先验的 tested 里） */
+function testedTotal(s){
+  return (s.count||0) + ((s.prior&&s.prior.tested)||0);
+}
+
+/* 一轮的额度用完了、但样本还不够：接着再答几道（不重开一轮、先验不动）。
+   —— 把上限抬高，同时把"回头复核"的额度也放开一点，
+      否则引擎会因为"该补的都补完了"立刻再次收工，一道题都出不来。 */
+var EXTEND_N=8;
+function extendSession(s, extra){
+  if(!s) return s;
+  extra=extra||EXTEND_N;
+  if(s.mode==='sentence'){
+    s.sentCap=(s.sentCap||SENT_MAX)+Math.max(1,Math.ceil(extra/6));  /* 一句能盖好几个字 */
+  }else{
+    s.cap=(s.cap||MAX_Q)+extra;
+    s.topupBoost=(s.topupBoost||0)+2;
+    /* 复核额度直接放开到整轮上限（整轮反正已经被 cap 卡住了）：
+       不然引擎会因为"该补的都补完了"立刻再次收工，一道题都出不来 */
+    s.topupBudget=s.cap;
+    if(s.phase==='warmup'){ s.phase='stair'; s.blockAsked=0; s.blockCorrect=0; }
+  }
+  s.done=false;
+  s.stopReason='';
+  return s;
+}
 
 /* 实测范围之内、但这一轮没出到题的段：取两边已测段里小的那个 */
 function innerRate(m, pts){
@@ -664,6 +717,11 @@ function computeResult(s){
   var topLv=LEVELS.length, topAsked=s.asked[topLv]||0;
   var topAced=(topAsked>0 && (s.correct[topLv]||0)>=topAsked);
   var topOut=(misses===0 && s.count>0 && topAced);
+  /* 样本够不够：累计测满 MIN_TESTED 个字才给分数。
+     真的一路全对闯到最高关（topAced）是例外——那时候证据已经足够决定性，
+     再让他多答几道也不会改变结论，没必要卡着不给。 */
+  var testedN=testedTotal(s);
+  var enough=(testedN>=MIN_TESTED)||topAced;
   return {
     est:est10, lo:Math.min(lo10,est10), hi:Math.min(5000,Math.max(hi10,est10)),
     starLevel:starLevel, levels:levels, wrong:wrong,
@@ -672,7 +730,9 @@ function computeResult(s){
     distinct:s.count, misses:misses, topOut:topOut,
     /* 跨轮累积的口径：这一轮做了多少、之前累计了多少、这是第几轮 */
     sessCount:s.count, priorN:s.priorN||0, totalN:s.count+(s.priorN||0),
-    rounds:(s.priorRounds||0)+1, topTested:topAced
+    rounds:(s.priorRounds||0)+1, topTested:topAced,
+    /* 样本门槛：测了多少字、够不够给分数、还差几个 */
+    testedN:testedN, minTested:MIN_TESTED, enough:enough, needN:Math.max(0,MIN_TESTED-testedN)
   };
 }
 
@@ -783,4 +843,4 @@ function levelProgress(s){
 }
 
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };

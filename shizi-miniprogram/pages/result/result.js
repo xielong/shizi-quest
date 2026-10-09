@@ -8,9 +8,10 @@ var app = getApp();
 
 Page({
   data: {
-    name: '', shownEst: 0,
+    name: '', shownEst: 0, heroTitle: '',
     r: null, starStars: [], levelText: '',
     topOut: false, noMiss: false, estWord: '约',
+    enough: true, shortText: '',
     accumText: '', roughText: '', noMissText: '',
     pandaText: '', panda: [], sceneSrc: '', sceneTag: '', snow: [],
     parts: [], scenes: [], worldNote: '',
@@ -36,6 +37,10 @@ Page({
        或者（旧版本的毛病）看着数字贴到 5000 一头雾水。 */
     var topOut = !!r.topOut;
     var noMiss = (r.misses === 0 && r.count > 0 && !topOut);
+    /* 样本够不够：累计测满 MIN_TESTED 个字才出分数。
+       不够的时候整页都不显示数字 —— 只答了几道题，算出来的"识字量"没有意义，
+       家长要看到的是"还需要再多答几道"。 */
+    var enough = !!r.enough;
 
     /* ---- hero ---- */
     var starStars = [], i;
@@ -61,7 +66,10 @@ Page({
          + '或者一次多玩几题，等他碰到认不出的字，分界才会露出来。')
       : '';
     var levelText;
-    if (topOut) {
+    if (!enough) {
+      levelText = '这次一共测了 ' + r.testedN + ' 个字（' + howDone + '），题目太少了。'
+        + '至少测满 ' + r.minTested + ' 个字才出分数——题太少的话，算出来的数字没有意义，所以先不显示。';
+    } else if (topOut) {
       levelText = '全部答对！一路闯到最高难度（' + E.LEVELS[E.LEVELS.length - 1].name + '），' + howDone;
     } else if (noMiss) {
       levelText = '这轮一道都没答错，还没碰到他认不出的字，' + howDone;
@@ -70,6 +78,10 @@ Page({
         ? ('稳定掌握到 ' + r.starLevel + ' 星难度（' + E.LEVELS[r.starLevel - 1].name + '），' + howDone)
         : ('本次认识 ' + r.correctTotal + ' 个字，' + howDone);
     }
+    /* 样本不够时给家长下一步：说清楚"还差几个字、怎么补"，并安抚一句豆豆照长 */
+    var shortText = enough ? '' 
+      : ('同一套玩法再答一轮就行：前面测过的字会累加进来，攒够 ' + r.minTested + ' 个字马上出分数。'
+         + '豆豆的成长值已经记上了，这几道题没白答。');
 
     /* ---- 豆豆的成长 ---- */
     var pun = E.pandaUnlocked(total), pnext = E.pandaNext(total), freshNames = [];
@@ -113,10 +125,15 @@ Page({
     this.setData({
       name: profile.name,
       r: r,
+      heroTitle: enough
+        ? (profile.name + ' 的识字量' + ((topOut || noMiss) ? '至少' : '约'))
+        : ('还差 ' + r.needN + ' 个字就能出分数'),
       starStars: starStars,
       levelText: levelText,
       topOut: topOut,
       noMiss: noMiss,
+      enough: enough,
+      shortText: shortText,
       estWord: (topOut || noMiss) ? '至少' : '约',
       accumText: accumText, roughText: roughText, noMissText: noMissText,
       pandaText: pandaText,
@@ -137,7 +154,7 @@ Page({
       certMeta: profile.age + ' 岁 · 收集到 ' + r.starLevel + ' 颗难度星 · ' + E.todayStr()
     });
 
-    this.animNumber(r.est);
+    if (enough) this.animNumber(r.est);
   },
 
   /* 数字滚动 */
@@ -178,12 +195,23 @@ Page({
     var r = this.data.r, profile = app.profile();
     var isSent = r.mode === 'sentence';
     var lowB = !!(r.topOut || (r.misses === 0 && r.count > 0));   // 没答错过 = 下限口径
-    var txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (lowB ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
-      + '玩法：' + E.modeName(r.mode) + '，' + (isSent ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字') : ('共 ' + r.count + ' 题'))
-      + (r.priorN > 0 ? ('（第 ' + r.rounds + ' 轮，把前面几轮攒的 ' + r.priorN + ' 题也一起算了）') : '')
-      + '，通过 ' + r.starLevel + ' 星难度。'
-      + (r.topOut ? '（全部答对，测到字表上限）' : (lowB ? '（一道都没答错，还没测到他的边界，这是下限）' : ''))
-      + E.todayStr();
+    var howMany = isSent
+      ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字')
+      : ('共 ' + r.count + ' 题');
+    var txt;
+    if (!r.enough) {
+      /* 样本不够：不报数字，只说"还需要再多答几道题" */
+      txt = profile.name + '（' + profile.age + '岁）识字小测：这次一共测了 ' + r.testedN + ' 个字，'
+        + '题目太少（至少 ' + r.minTested + ' 个才出分数），先不给成绩，还要再多答 ' + r.needN + ' 个。'
+        + '玩法：' + E.modeName(r.mode) + '，' + howMany + '。' + E.todayStr();
+    } else {
+      txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (lowB ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
+        + '玩法：' + E.modeName(r.mode) + '，' + howMany
+        + (r.priorN > 0 ? ('（第 ' + r.rounds + ' 轮，把前面几轮攒的 ' + r.priorN + ' 题也一起算了）') : '')
+        + '，通过 ' + r.starLevel + ' 星难度。'
+        + (r.topOut ? '（全部答对，测到字表上限）' : (lowB ? '（一道都没答错，还没测到他的边界，这是下限）' : ''))
+        + E.todayStr();
+    }
     var that = this;
     wx.setClipboardData({
       data: txt,
