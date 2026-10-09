@@ -17,43 +17,8 @@
 }
 
 /* ---------- 世界舞台 ---------- */
-.world {
-  position: relative; height: 480rpx; border-radius: 44rpx; overflow: hidden;
-  margin-top: 20rpx;
-  box-shadow: 0 20rpx 48rpx rgba(96, 124, 178, .16);
-}
-.world-bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.world-mascot {
-  position: absolute; left: 50%; bottom: 88rpx; width: 226rpx; height: 300rpx;
-  margin-left: -113rpx;
-  transition: transform .18s ease-in;
-}
-.world-mascot.turn-out { transform: scaleX(0); }
-.world-mascot.turn-in { transform: scaleX(1); transition: transform .3s cubic-bezier(.3, 1.5, .5, 1); }
-.panda-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.world-tag {
-  position: absolute; left: 24rpx; top: 22rpx;
-  background: rgba(255, 255, 255, .85); border-radius: 999rpx;
-  padding: 8rpx 22rpx; font-size: 24rpx; font-weight: 700; color: #2b3a55;
-}
-.world-hint {
-  position: absolute; right: 24rpx; bottom: 20rpx;
-  background: rgba(255, 255, 255, .8); border-radius: 999rpx;
-  padding: 8rpx 20rpx; font-size: 22rpx; color: #71809e;
-}
-
-/* 雪花 */
-.snowfall { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; pointer-events: none; }
-.flake {
-  position: absolute; top: -24rpx; border-radius: 50%;
-  background: rgba(255, 255, 255, .96);
-  box-shadow: 0 0 8rpx rgba(255, 255, 255, .9);
-  animation: snowDrop linear infinite;
-}
-@keyframes snowDrop {
-  from { transform: translate3d(0, -40rpx, 0); }
-  to { transform: translate3d(28rpx, 560rpx, 0); }
-}
+/* .world / .world-bg / .world-mascot / .panda-layer / .world-tag / .world-hint / .snowfall / .flake
+   已上移到 app.wxss（全局），供首页和结果页共用 */
 
 /* ---------- 养成进度 ---------- */
 .pp { margin: 24rpx 6rpx 0; }
