@@ -1,4 +1,10 @@
 /* ---------- 成长记录 ---------- */
+.histtop {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14rpx; padding-bottom: 20rpx;
+}
+.histtitle { font-size: 32rpx; font-weight: 900; color: #2b3a55; }
+.histhint { font-size: 22rpx; color: #a5b1c9; }
 .chartwrap { padding: 8rpx 0 16rpx; }
 .chart { width: 100%; height: 440rpx; }
 

@@ -8,7 +8,8 @@ Page({
   data: {
     hist: [],
     rows: [],
-    hasChart: false
+    hasChart: false,
+    curName: ''
   },
 
   onShow: function () {
@@ -20,7 +21,10 @@ Page({
         est: h.est, stars: h.stars
       };
     });
-    this.setData({ hist: hist, rows: rows, hasChart: hist.length >= 2 });
+    this.setData({
+      hist: hist, rows: rows, hasChart: hist.length >= 2,
+      curName: store.curPlayer().name
+    });
     if (hist.length >= 2) this.drawChart(hist);
   },
 

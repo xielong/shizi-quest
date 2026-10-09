@@ -30,11 +30,29 @@
     <view class="pp-world">{{worldLine}}</view>
   </view>
 
+  <!-- 谁在玩：多个小朋友各自一份进度 -->
+  <view class="card">
+    <view class="row">
+      <view class="label" style="margin:0;flex:1">谁在玩</view>
+      <view class="link" bindtap="addPlayer">＋ 加一个小朋友</view>
+    </view>
+    <view class="players">
+      <view wx:for="{{players}}" wx:key="id"
+        class="player {{item.id==curPid?'on':''}}"
+        data-id="{{item.id}}" bindtap="switchPlayer" bindlongpress="playerMenu">
+        <text class="pn">{{item.name}}</text>
+        <text class="pa">{{item.age}} 岁</text>
+      </view>
+    </view>
+    <view class="muted" style="margin-top:16rpx">每个小朋友的豆豆和成长记录是分开的，点名字就能换人。长按可以改名或删掉。</view>
+    <button class="btn mini danger" style="margin-top:20rpx" bindtap="resetProgress">清空 {{curName}} 的进度</button>
+  </view>
+
   <!-- 名字 / 年龄 / 玩法 -->
   <view class="card">
     <view class="field">
       <view class="label">小朋友的名字</view>
-      <input class="inp" value="{{name}}" maxlength="8" placeholder="写个小名就好" bindinput="onName" />
+      <input class="inp" value="{{name}}" maxlength="8" placeholder="写个小名就好" bindinput="onName" bindblur="saveForm" />
     </view>
     <view class="field">
       <view class="label">几岁啦</view>
@@ -55,7 +73,7 @@
         </view>
         <view class="mode wide {{mode=='sentence'?'on':''}}" data-mode="sentence" bindtap="pickMode">
           <view class="mt">读句子 <text class="tagline">最全面</text></view>
-          <view class="md">出现一句话，小朋友读出来，家长把没念出来的字点一下。一句能测十来个字，读几十句就很准了。</view>
+          <view class="md">出现一句话，小朋友读出来，家长把没念出来的字点一下。一句能测十来个字，十几句就很准了。</view>
         </view>
       </view>
     </view>
@@ -66,5 +84,5 @@
     </view>
   </view>
 
-  <view class="muted center foot-note">读一读 / 找一找约 3~6 分钟 · 读句子约 6~10 分钟 · 全程无倒计时 · 随时可以停</view>
+  <view class="muted center foot-note">读一读 / 找一找约 20 题 · 读句子约 14 句 · 全程无倒计时 · 随时可以停</view>
 </view>

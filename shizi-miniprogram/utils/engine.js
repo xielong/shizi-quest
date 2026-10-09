@@ -156,20 +156,27 @@ var FIT_BMIN = 0.4, FIT_BMAX = 3.0;
    估算：把各段实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合，
         用曲线补齐没测到的难度段，再 Σ（认识率 × 该段字数）。
    ========================================================================= */
-/* 出题参数（下面这几个值都是跑蒙特卡洛模拟标定出来的） */
+/* 出题参数（下面这几个值都是跑蒙特卡洛模拟标定出来的）
+   2026-10 调小过一轮：小朋友反映"出的字太多"。标定结论——
+     读一读/找一找 28 题 → 21 题（再往下砍偏差会从 7% 跳到 19%，不划算）
+     读句子       26 句 → 14 句（句子一句能覆盖十来个字，几乎不损失精度） */
 
-var WARM_N=3, BLOCK=3, PASS_NEED=2;
+var WARM_N=2, BLOCK=3, PASS_NEED=2;
 
-var TOPN=5, TOP_ABOVE=5, TOP_MAX=16, MAX_Q=38;
+var TOPN=4, TOP_ABOVE=3, TOP_MAX=10, MAX_Q=24;
+/* 折返夹住分界后，最少攒到这么多题才转复核（原来 18） */
+var STAIR_MIN_Q=13;
 /* 实测认识率的权重 = n/(n+BLEND_N)：题越多越信实测，题少就更多听曲线 */
 
 var BLEND_N=2;
 
 /* 句子认读模式的参数 */
 
-var SENT_WARM=3;    // 暖场：前几句先挑最浅的句子
+var SENT_WARM=2;    // 暖场：前几句先挑最浅的句子
 
-var SENT_MAX=26;    // 最多读多少句（家长随时可以提前结束）
+var SENT_MAX=14;    // 最多读多少句（家长随时可以提前结束）
+
+var SENT_CEIL=10;   // 到这么多句后，若最高档也认得不差，就早点收工
 
 var SENT_SKIP=0.35; // 已经测过的字，再次出现的价值折扣
 
@@ -299,7 +306,7 @@ function stairDecide(s){
     }
   }
   // 已经一上一下折返过、且题量够了 → 分界夹住，转入回头复核
-  if(s.reversals>=2 && s.count>=18 && s.phase==='stair'){
+  if(s.reversals>=2 && s.count>=STAIR_MIN_Q && s.phase==='stair'){
     s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s);
   }
 }
@@ -337,7 +344,7 @@ function nextSentence(s){
   if(s.sentCount>=SENT_MAX){ s.stopReason='limit'; s.done=true; return null; }
   // 连最难的十星字都认下来了，再读下去也没多少新信息，早点收工
   var top=LEVELS.length;
-  if(s.sentCount>=18 && (s.asked[top]||0)>=5 && (rateAt(s,top)||0)>=0.5){
+  if(s.sentCount>=SENT_CEIL && (s.asked[top]||0)>=3 && (rateAt(s,top)||0)>=0.5){
     s.stopReason='ceiling'; s.done=true; return null;
   }
   var idx=pickSentence(s);
@@ -641,7 +648,7 @@ function modeName(m){
 
 function levelProgress(s){
   if(s.mode==='sentence') return clamp(s.sentCount/SENT_MAX,0.02,0.97);
-  if(s.phase==='warmup') return clamp(s.count/3*0.07,0.01,0.07);
+  if(s.phase==='warmup') return clamp(s.count/WARM_N*0.07,0.01,0.07);
   if(s.phase==='stair'){
     var base=0.07+(s.curLevel-1)/LEVELS.length*0.60;
     var within=((s.blockAsked||0)%BLOCK)/BLOCK*(0.60/LEVELS.length);

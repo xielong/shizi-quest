@@ -1,5 +1,9 @@
 <view class="page">
   <view class="card">
+    <view class="histtop">
+      <text class="histtitle">{{curName}} 的成长记录</text>
+      <text class="histhint">要换人，回首页点名字</text>
+    </view>
     <view wx:if="{{hasChart}}" class="chartwrap">
       <canvas type="2d" id="chart" class="chart"></canvas>
     </view>

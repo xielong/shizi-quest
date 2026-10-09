@@ -1,10 +1,12 @@
 /* =========================================================================
-   首页：豆豆舞台 + 养成进度 + 选玩法开测
+   首页：豆豆舞台 + 养成进度 + 选玩法开测 + 多小朋友
    ========================================================================= */
 var E = require('../../utils/engine.js');
 var store = require('../../utils/store.js');
 var P = require('../../utils/panda.js');
 var app = getApp();
+
+var AGES = [3, 4, 5, 6, 7, 8];
 
 var BUBBLES = [
   '嗨，我是熊猫豆豆，一起来闯关吧！',
@@ -15,7 +17,7 @@ var BUBBLES = [
 
 Page({
   data: {
-    name: '跳跳',
+    name: '',
     ages: ['3 岁', '4 岁', '5 岁', '6 岁', '7 岁', '8 岁'],
     ageIdx: 2,
     mode: 'read',
@@ -30,20 +32,141 @@ Page({
     ppPct: 0,
     ppText: '',
     chips: [],
-    worldLine: ''
+    worldLine: '',
+    /* 小朋友 */
+    players: [],
+    curPid: '',
+    curName: ''
   },
 
   onLoad: function () {
-    var p = app.profile();
-    var idx = [3, 4, 5, 6, 7, 8].indexOf(p.age);
-    this.setData({
-      name: p.name,
-      ageIdx: idx >= 0 ? idx : 2,
-      bubble: BUBBLES[Math.floor(Math.random() * BUBBLES.length)]
-    });
+    this.setData({ bubble: BUBBLES[Math.floor(Math.random() * BUBBLES.length)] });
+    this.loadPlayers();
   },
 
   onShow: function () { this.refresh(); },
+
+  /* ---- 小朋友列表 ---- */
+  loadPlayers: function () {
+    var list = store.listPlayers();
+    var cur = store.curPlayer();
+    this.setData({
+      players: list.map(function (p) { return { id: p.id, name: p.name, age: p.age }; }),
+      curPid: cur.id,
+      curName: cur.name,
+      name: cur.name,
+      ageIdx: Math.max(0, AGES.indexOf(cur.age))
+    });
+  },
+
+  /* 换人：进度、豆豆、表单一起换成他的 */
+  switchPlayer: function (e) {
+    var id = e.currentTarget.dataset.id;
+    if (id === this.data.curPid) return;
+    store.setCur(id);
+    app.reloadProfile();
+    this.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
+    this.loadPlayers();
+    this.refresh();
+    wx.showToast({ title: '换成 ' + store.curPlayer().name + ' 啦', icon: 'none', duration: 1200 });
+  },
+
+  addPlayer: function () {
+    var that = this;
+    wx.showModal({
+      title: '加一个小朋友',
+      editable: true,
+      placeholderText: '写个小名就好，比如「朵朵」',
+      success: function (res) {
+        if (!res.confirm) return;
+        var nm = (res.content || '').trim();
+        if (!nm) return;
+        store.addPlayer(nm, 5);
+        app.reloadProfile();
+        that.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
+        that.loadPlayers();
+        that.refresh();
+        wx.showToast({ title: '已切到 ' + nm + '，进度是全新的哦', icon: 'none', duration: 1800 });
+      }
+    });
+  },
+
+  /* 长按某个小朋友：改名 / 删掉 */
+  playerMenu: function (e) {
+    var id = e.currentTarget.dataset.id, that = this;
+    var target = null;
+    this.data.players.forEach(function (p) { if (p.id === id) target = p; });
+    if (!target) return;
+    var items = ['改名', '删掉这个小朋友'];
+    wx.showActionSheet({
+      itemList: items,
+      success: function (res) {
+        if (res.tapIndex === 0) that.renamePlayer(target);
+        else that.deletePlayer(target);
+      }
+    });
+  },
+
+  renamePlayer: function (target) {
+    var that = this;
+    wx.showModal({
+      title: '改名字',
+      editable: true,
+      content: target.name,
+      placeholderText: '新的名字',
+      success: function (res) {
+        if (!res.confirm) return;
+        var nm = (res.content || '').trim();
+        if (!nm) return;
+        store.updatePlayer(target.id, { name: nm });
+        app.reloadProfile();
+        that.loadPlayers();
+        that.setData({ curName: store.curPlayer().name });
+      }
+    });
+  },
+
+  deletePlayer: function (target) {
+    var that = this;
+    if (this.data.players.length <= 1) {
+      wx.showToast({ title: '至少要留一个小朋友', icon: 'none' });
+      return;
+    }
+    wx.showModal({
+      title: '删掉 ' + target.name + '？',
+      content: '他的豆豆和成长记录会一起删掉，没法恢复。',
+      confirmText: '删掉',
+      confirmColor: '#e05b5b',
+      success: function (res) {
+        if (!res.confirm) return;
+        store.removePlayer(target.id);
+        app.reloadProfile();
+        that.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
+        that.loadPlayers();
+        that.refresh();
+        wx.showToast({ title: '删掉了', icon: 'none' });
+      }
+    });
+  },
+
+  /* ---- 清空当前小朋友的进度 ---- */
+  resetProgress: function () {
+    var that = this;
+    var cur = store.curPlayer();
+    wx.showModal({
+      title: '清空 ' + cur.name + ' 的进度？',
+      content: '豆豆会变回一开始的样子（只剩个头），四季小世界和成长记录也一起清零。名字会留着。',
+      confirmText: '清空',
+      confirmColor: '#e05b5b',
+      success: function (res) {
+        if (!res.confirm) return;
+        store.clearPlayerData(cur.id);
+        that.setData({ facing: 'front', turnCls: '', turnHint: '点豆豆，他会转身' });
+        that.refresh();
+        wx.showToast({ title: '进度已清零，豆豆重新开始', icon: 'none', duration: 1800 });
+      }
+    });
+  },
 
   /* ---- 把豆豆和进度刷成最新（每次回到首页都调） ---- */
   refresh: function () {
@@ -100,19 +223,27 @@ Page({
     }, 180);
   },
 
-  /* ---- 表单 ---- */
+  /* ---- 表单（改的就是当前小朋友） ---- */
   onName: function (e) { this.setData({ name: e.detail.value }); },
-  onAge: function (e) { this.setData({ ageIdx: Number(e.detail.value) }); },
+  onAge: function (e) {
+    var idx = Number(e.detail.value);
+    this.setData({ ageIdx: idx });
+    this.saveForm();
+  },
+  saveForm: function () {
+    var name = (this.data.name || '').trim();
+    if (!name) { this.setData({ name: store.curPlayer().name }); return; }
+    var saved = store.updatePlayer(store.curId(), { name: name, age: AGES[this.data.ageIdx] || 5 });
+    if (saved) this.setData({ curName: saved.name });
+    app.reloadProfile();
+  },
   pickMode: function (e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
 
   /* ---- 开始测试 ---- */
   start: function () {
-    var ages = [3, 4, 5, 6, 7, 8];
-    var name = (this.data.name || '').trim() || '跳跳';
-    var age = ages[this.data.ageIdx] || 5;
-    app.setProfile({ name: name, age: age });
-
-    var session = E.newSession({ name: name, age: age, mode: this.data.mode });
+    this.saveForm();
+    var p = app.profile();
+    var session = E.newSession({ name: p.name, age: p.age, mode: this.data.mode });
     app.globalData.session = session;
     wx.navigateTo({ url: '/pages/test/test' });
   },

@@ -32,6 +32,23 @@
 .chip2.on { opacity: 1; filter: none; }
 .pp-world { margin-top: 12rpx; font-size: 24rpx; color: #71809e; }
 
+/* ---------- 小朋友 ---------- */
+.link { font-size: 26rpx; font-weight: 800; color: #2f8fd6; padding: 6rpx 4rpx; }
+.players { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 20rpx; }
+.player {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 132rpx; padding: 16rpx 22rpx;
+  background: #f7fafd; border: 3rpx solid #e6ecf8; border-radius: 24rpx;
+}
+.player.on { background: #eaf6ff; border-color: #5cb8ff; box-shadow: 0 8rpx 20rpx rgba(92, 184, 255, .18); }
+.player .pn { font-size: 30rpx; font-weight: 900; color: #2b3a55; }
+.player .pa { font-size: 21rpx; color: #71809e; margin-top: 2rpx; }
+.player.on .pa { color: #2f8fd6; }
+.btn.danger {
+  color: #e05b5b; border-color: #ffd7d7; box-shadow: 0 6rpx 0 #ffe6e6;
+  background: #fff8f8;
+}
+
 /* ---------- 表单 ---------- */
 .field { margin-top: 22rpx; }
 .field:first-child { margin-top: 0; }
