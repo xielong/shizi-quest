@@ -1,6 +1,6 @@
 {
   "description": "识字大冒险 —— 给小朋友的识字量小测试（微信小程序版）",
-  "appid": "touristappid",
+  "appid": "wx470eb558e7b6a335",
   "projectname": "shizi-miniprogram",
   "compileType": "miniprogram",
   "libVersion": "3.5.5",
@@ -20,11 +20,27 @@
       "ignore": [],
       "disablePlugins": [],
       "outputPath": ""
-    }
+    },
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "condition": false
   },
   "condition": {
     "miniprogram": {
       "list": []
     }
-  }
+  },
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "editorSetting": {}
 }
