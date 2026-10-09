@@ -1,0 +1,12 @@
+/* ---------- 家长说明 ---------- */
+.h3 { font-size: 34rpx; font-weight: 900; margin-bottom: 8rpx; }
+.h4 { font-size: 29rpx; font-weight: 900; color: #3ea6ff; margin: 30rpx 0 10rpx; }
+.li { font-size: 27rpx; color: #2b3a55; line-height: 1.8; margin-top: 10rpx; }
+.li .b { font-weight: 900; color: #2b3a55; background: #eaf6ff; border-radius: 8rpx; padding: 2rpx 8rpx; }
+.hl { color: #ff8f7a; font-weight: 900; }
+.ref { margin-top: 8rpx; }
+.refrow {
+  display: flex; justify-content: space-between; padding: 14rpx 8rpx;
+  border-bottom: 2rpx solid #f1f5fc; font-size: 27rpx; color: #2b3a55;
+}
+.refrow:last-child { border-bottom: 0; }

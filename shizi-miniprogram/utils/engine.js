@@ -1,0 +1,654 @@
+/* =========================================================================
+   engine.js —— 识字大冒险的纯逻辑层（从小程序无关的角度抽取，不含任何渲染/DOM）
+   来源：网页版 shizi-quest/index.html 的 <script>，逐块搬运，逻辑未改动
+   包含：10 档字表(510字)、202 句故事题库、自适应出题引擎(爬梯子+回头复核)、
+        逻辑曲线拟合估算 + 参数自助法区间、熊猫/四季场景的解锁门槛
+   ========================================================================= */
+'use strict';
+
+var LEVELS = [
+  {stars:1, size:100, color:'#5cb8ff', name:'一星 · 小小芽',
+   chars:'一二三四五六七八九十人大小上下口手日月山水火木天子个很得飞回'.split('')},
+  {stars:2, size:150, color:'#4fc3e8', name:'二星 · 小竹笋',
+   chars:'地我你好是不了的在有他们来去说看听走进见到和也就都吧星石书出雨这着她呀啦它可孩'.split('')},
+  {stars:3, size:250, color:'#4fd6a4', name:'三星 · 小树苗',
+   chars:'会能要从只让叫吃想起放学爱笑心头前后里外多少马住写把亮两中开新找用呢吗谁哪太真还再又快耳眼脚站送长点身朋友风生今饭东西朵拉巴春越认识自己洗球过问时没做第方动才加比远土成'.split('')},
+  {stars:4, size:300, color:'#ffc93c', name:'四星 · 小灯笼',
+   chars:'玩唱跳跑喝帮画花草树叶鸟鱼虫车路家门早晚白黑红牛习买给带喜字边田坐条包哇哭丢掉抱脸嘴最慢先怎鼻窗热停怕谢种捉迷觉空肉声音各像高闭睛题伸抓候更老发睡请被数吹往双共浇干样爬变背活'.split('')},
+  {stars:5, size:400, color:'#ffab4c', name:'五星 · 小火箭',
+   chars:'爸妈哥姐弟妹爷桥猫狗兔鸡鸭鹅蛋奶米面菜果汤茶糖甜歌欢穿绿暖座本青刀舞饿喊追藏捡摸腿肚梦香胖累物提采摘旁婆气急礼园尾原颗紧油踩糕泳处装'.split('')},
+  {stars:6, size:500, color:'#ff8f7a', name:'六星 · 小飞船',
+   chars:'猪羊熊虎猴象鹿虾蟹蜜蜂蝶蛙蛇龟燕竹松柳桃桌椅床灯美游秋冷什么等屋乌躲尝夸饱软硬尖圆因然云排队细吐味闻苹梨醒忘滑凉灵粒丛压弯'.split('')},
+  {stars:7, size:600, color:'#f5789b', name:'七星 · 小魔法',
+   chars:'碗筷杯勺锅壶盘盆桶篮伞袋帽袜裤裙鞋剪针线绳锁钥匙冬池塘黄流船彩戴套煮雪清泪影瘦臭突忽罐厉害酱纹丝贝壳钻搬千万腰割挂'.split('')},
+  {stars:8, size:700, color:'#a98bff', name:'八星 · 小旋风',
+   chars:'湖河海岸坡岛林森苗沙泥洞泉浪冰霜雾露虹雷溪苔藤蒲落满野夏阳光'.split('')},
+  {stars:9, size:800, color:'#8b7bff', name:'九星 · 小博士',
+   chars:'蜻蜓蜘蛛蚂蚁蝌蚪蟋蟀蜗蚯蚓蝉蚊蝇蛾蝙蝠鲸鲨珊瑚蚌熟蝴蚕'.split('')},
+  {stars:10, size:1200, color:'#6f7bd4', name:'十星 · 大字王',
+   chars:'翅膀巢穴鳞蹄爪稻穗犁桨帆舵炉灶檐篱筐磨锄镰藕笋芭网织鳍珠笆'.split('')}
+];
+
+var AGE_REF = [
+  ['3 岁',        '100 ~ 300 字'],
+  ['4 岁',        '300 ~ 600 字'],
+  ['5 岁',        '600 ~ 1000 字'],
+  ['6 岁（幼小衔接）','1000 ~ 1600 字'],
+  ['一年级结束',   '1600 字左右'],
+  ['二年级结束',   '2500 字左右'],
+  ['三年级结束',   '3000 字左右']
+];
+
+/* =========================================================================
+   SECTION: SENTENCES — 句子认读题库
+   每个句子都只用上面十档字表里的字（标点不计分），小朋友整句念出来，
+   家长把没念出来的字点一下。一句 5~12 个字，一次就能拿到十几个字的证据，
+   比一次只测一个字快得多。句子里同一个字重复出现只统计一次。
+   ========================================================================= */
+
+var SENTENCE_TEXT = [
+  '小猫饿了，想吃鱼', '他走出家门，来到河边', '河里有鱼，可是他不会游水',
+  '小狗来了，说，我来帮你', '小狗跳下水，小鱼都跑过来了', '小猫一伸手，就抓到一条鱼',
+  '小猫和小狗一起回家', '小猫说，你是我的好朋友', '下雨了，我不能出去玩',
+  '我坐在门口看雨', '雨点在地上跳舞', '妈妈给我一杯甜牛奶',
+  '我问妈妈，雨什么时候停', '雨停了，太阳出来了', '我出去踩水玩',
+  '今天真开心', '今天是小狗的生日', '小猫送来一条鱼',
+  '小鸡送来两个鸡蛋', '小鸭带来一袋糖', '大家一起唱歌跳舞',
+  '桌上有一个大蛋糕', '蛋糕上有五颗红果子', '小狗说，谢谢你们',
+  '小鸭想下水游泳', '他站在水边，有点怕', '鸡妈妈说，水里很好玩',
+  '小鸭闭上眼睛，跳了下去', '水很暖，小鸭不怕了', '他游得很快',
+  '小鱼在旁边给他加油', '小鸭学会游泳了', '我们玩捉迷藏',
+  '我闭上眼睛，数到十', '他们都藏在哪里呢', '我找到了树后的小猫',
+  '门后面还有一只小狗', '只有小兔没找到', '原来他躲在桌子下面',
+  '大家都笑了', '小兔在田里种菜', '他天天给菜浇水',
+  '菜长高了，叶子上有小虫', '小兔很着急', '小鸟说，我来帮你捉虫',
+  '小虫都被捉走了', '菜长得又大又绿', '小兔请大家来吃菜',
+  '秋天到了，树叶黄了', '小熊要找一个树洞过冬', '他走了一天才找到',
+  '洞里很暖，还有干草', '小熊抱着蜜罐睡了一觉', '冬天到了，雪落满了树林',
+  '小熊在洞里做了一个梦', '春天来了，小熊醒过来', '天上有乌云，要下雨了',
+  '蚂蚁排着队搬东西', '他们走了一条很长的路', '第一只蚂蚁走在最前面',
+  '雨来了，他们都钻进了洞里', '洞里很干，也很暖和', '蚂蚁说，等雨停了再出去',
+  '雨停了，草地更绿了', '我来到海边，海风吹得很凉', '沙上有各种各样的贝壳',
+  '我捡到一个最好看的', '贝壳上有细细的花纹', '我把它放在耳朵旁边',
+  '里面好像有海的声音', '我把贝壳带回了家', '这是大海送我的礼物',
+  '妈妈带我去外婆家', '我们坐车走了很远', '外婆在门口等我们',
+  '她做了一桌好菜', '有鱼，有汤，还有一盘肉', '我吃了两碗饭',
+  '外婆说我长高了', '外婆家的空气真好', '秋天的果园里有好多果子',
+  '苹果红了，梨子也黄了', '我们提着篮子去采果子', '我采到一个最大的苹果',
+  '哥哥在树上摘桃子', '妹妹在树下捡落叶', '大家的篮子都满了',
+  '回家做果酱，真甜', '蜗牛在草叶上慢慢地爬', '乌龟从水里爬上来',
+  '蜗牛说，你走得真快', '乌龟说，我们比一比', '他们一起往前爬',
+  '蝴蝶在旁边看着', '蜗牛爬到了叶子的最高处', '乌龟说，你真厉害',
+  '谁在天上飞，小鸟在天上飞', '什么在水里游，小鱼在水里游', '什么有长鼻子，大象有长鼻子',
+  '谁最爱吃桃子，猴子最爱吃桃子', '什么有翅膀，小鸟和蝴蝶都有翅膀', '谁住在山上，老虎住在山上',
+  '谁的耳朵最长，小兔的耳朵最长', '谁会吐丝，蚕会吐丝', '小狗，你在做什么呀',
+  '我在找我的球', '球在哪里呢', '就在你的身后呀',
+  '我找到了，谢谢你', '我们一起去玩吧', '好呀，我马上就来了',
+  '今天真开心', '蜻蜓和蝴蝶在草上飞', '蜘蛛在屋檐下织网',
+  '蚯蚓在泥土里钻来钻去', '蝌蚪在水里游，变成了青蛙', '蟋蟀在草丛里唱歌，蝉在树上叫',
+  '蜗牛背着壳，慢慢地爬', '蝙蝠白天躲在山洞里睡觉', '鲸鱼和鲨鱼生活在大海里',
+  '牛在田里犁地，蹄子上都是泥', '稻穗熟了，压弯了腰', '爷爷用锄头和镰刀割稻子',
+  '船上有桨、帆和舵', '篱笆上爬满了藤', '竹筐里装着藕和笋',
+  '屋檐下有一个鸟巢', '炉灶上煮着一锅香香的汤', '我在家里看书',
+  '天上有一个太阳', '他有一双手', '十个人上山',
+  '小鸟飞回来了', '大人小孩一起走', '他在地上画太阳',
+  '我和你一起回家', '好大的一只鸟', '他的手上有一个果子',
+  '一二三四五，六七八九十', '天上有日和月', '大人很大，小孩很小',
+  '天大，地也大', '我很好，你也好', '他和她在看书',
+  '天上下的雨很大', '我看你，你看我', '山上有个大树',
+  '天上日月，地上山水', '我在家里看书', '你说我听，我说你听',
+  '我们会数数了', '我的鞋不见了，它在床下面', '妈妈，我的肚子饿了',
+  '小猫在追自己的尾巴', '我闻到了花的香味', '谁把糖放在我的口袋里了',
+  '我数一数，一共有十只小鸟', '天太热了，我想吃冰', '这个苹果又大又圆',
+  '小狗的鼻子最灵', '月亮圆圆的，像一个大盘子', '我把书放回原来的地方',
+  '风一吹，花就动了', '妈妈的头发又黑又长', '爷爷的手很大，我的手很小',
+  '桌上有一碗热汤', '冬天快到了，天越来越冷', '夏天的太阳很亮',
+  '我有一千个问题要问你', '山上的野花开满了', '蝴蝶的翅膀上有花纹',
+  '小蚂蚁在搬一粒米', '树的影子长长的', '我家的门前有一条小河',
+  '他从木桥上走过去', '雨后的天空很清亮', '奶奶给我做了一双新袜子',
+  '河边的石头又圆又滑', '小鱼在水草里躲起来', '我要自己穿鞋和袜子',
+  '这个字我认识了', '小虫在叶子上睡觉', '我在门口等爸爸回家',
+  '妈妈问我今天学了什么', '我们一起数星星', '树叶落在我的头上',
+  '他把手拉得很紧', '锅里的汤很香', '我们坐在草地上看云',
+  '小鸟在巢里睡觉', '海里有鲸鱼和鲨鱼', '田里的稻子熟了',
+  '蜘蛛在屋檐下织网', '蟋蟀躲在草丛的洞里', '蚯蚓和蝌蚪都藏在泥土里',
+  '珊瑚和蚌藏在海沙里', '蝙蝠挂在屋檐的洞穴里', '爷爷用锄头锄地',
+  '船上有桨和帆', '他跑得又快又好', '我先洗手，再吃饭',
+  '小兔子跳得最高'
+];
+/* 字 → 等级 反查表 */
+
+var LEVEL_OF={};
+LEVELS.forEach(function(l,i){ l.chars.forEach(function(c){ LEVEL_OF[c]=i+1; }); });
+
+var NOT_SCORED={};
+'，。！？、；：'.split('').forEach(function(c){ NOT_SCORED[c]=1; });
+
+/* 预先把句子拆成字，算好"句内去重后的字"和难度（0.5×最难 + 0.5×平均） */
+
+var SENTENCES=SENTENCE_TEXT.map(function(t,idx){
+  var uniq=[], lvs=[];
+  for(var i=0;i<t.length;i++){
+    var c=t[i];
+    if(NOT_SCORED[c]) continue;
+    lvs.push(LEVEL_OF[c]||1);
+    if(uniq.indexOf(c)<0) uniq.push(c);
+  }
+  var mx=Math.max.apply(null,lvs), avg=lvs.reduce(function(a,b){return a+b;},0)/lvs.length;
+  return {t:t, uniq:uniq, lvs:lvs, mx:mx, avg:avg, lv:Math.max(1,Math.min(10,Math.round(0.5*mx+0.5*avg)))};
+});
+
+/* 拟合曲线时对"陡峭度"设上下限：太陡或太平都不符合字频规律，加个约束更稳 */
+
+var FIT_BMIN = 0.4, FIT_BMAX = 3.0;
+
+/* =========================================================================
+   SECTION: ENGINE — 自适应出题 + 识字量估算（纯逻辑，不碰 DOM）
+
+   出题思路：爬梯子 + 回头复核
+     1) 热身 WARM_N 题（一星），先让小朋友进入状态；
+     2) 阶梯：每关打一组 BLOCK 题。一组答对 ≥PASS_NEED 就往上走一关，
+        不足就往下走一关。一上一下（折返）说明"会／不会"的分界正好夹在中间，
+        不会因为某一道题没做出来就草草收场；
+     3) 回头复核：夹住分界以后停下来回头补测——分界那一关和它下面那一关
+        都补到 TOPN 题，分界上面那一关再摸 TOP_ABOVE 题。
+        这样估算依据的是"分界附近的一整批题"，而不是开头那几道。
+   估算：把各段实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合，
+        用曲线补齐没测到的难度段，再 Σ（认识率 × 该段字数）。
+   ========================================================================= */
+/* 出题参数（下面这几个值都是跑蒙特卡洛模拟标定出来的） */
+
+var WARM_N=3, BLOCK=3, PASS_NEED=2;
+
+var TOPN=5, TOP_ABOVE=5, TOP_MAX=16, MAX_Q=38;
+/* 实测认识率的权重 = n/(n+BLEND_N)：题越多越信实测，题少就更多听曲线 */
+
+var BLEND_N=2;
+
+/* 句子认读模式的参数 */
+
+var SENT_WARM=3;    // 暖场：前几句先挑最浅的句子
+
+var SENT_MAX=26;    // 最多读多少句（家长随时可以提前结束）
+
+var SENT_SKIP=0.35; // 已经测过的字，再次出现的价值折扣
+
+function shuffle(a){
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+
+function clamp(x,a,b){return x<a?a:(x>b?b:x);}
+
+function wilson(k,n,z){
+  if(!n) return [0,1];
+  var p=k/n, z2=z*z, d=1+z2/n;
+  var c=(p+z2/(2*n))/d;
+  var hw=z*Math.sqrt(p*(1-p)/n+z2/(4*n*n))/d;
+  return [clamp(c-hw,0,1), clamp(c+hw,0,1)];
+}
+
+function newSession(opt){
+  opt=opt||{};
+  var mode=opt.mode||'read';
+  var pools=LEVELS.map(function(l){return shuffle(l.chars.slice());});
+  var s={
+    name:opt.name||'跳跳', age:opt.age||5, mode:mode,
+    pools:pools, asked:{}, correct:{}, answers:[],
+    phase:'warmup', warmupLeft:WARM_N,
+    curLevel:2, blockAsked:0, blockCorrect:0, lastDir:1, reversals:0, floorFails:0,
+    boundary:0, topupCount:0,
+    q:null, done:false, stars:0, count:0, stopReason:'', shownLevel:0,
+    earned:0, pandaShown:0
+  };
+  if(mode==='sentence'){
+    // 句子模式：不按单字爬梯子，而是每句覆盖一批字
+    s.phase='sentence';
+    s.used={};          // 已经读过的句子下标
+    s.seen={};          // 已经统计过的字
+    s.curSentence=null; // 当前句子对象
+    s.marks={};         // 当前句子被标成"不认识"的字
+    s.sentCount=0;      // 已读句数
+  }
+  return s;
+}
+
+function pickChar(s,level){
+  var pool=s.pools[level-1];
+  if(pool&&pool.length) return pool.pop();
+  var arr=LEVELS[level-1].chars;
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function makeQuestion(s,level){
+  var ch=pickChar(s,level);
+  var q={level:level, ch:ch, options:null};
+  if(s.mode==='listen'){
+    var others=[], pool=LEVELS[level-1].chars;
+    while(others.length<3){
+      var c=pool[Math.floor(Math.random()*pool.length)];
+      if(c!==ch && others.indexOf(c)<0) others.push(c);
+    }
+    q.options=shuffle([ch].concat(others));
+    q.answer=ch;
+  }
+  return q;
+}
+/* 某难度段的"去猜测校正"认识率（听音模式已扣掉 25% 猜中率） */
+
+function rateAt(s,i){
+  var n=s.asked[i]||0; if(!n) return null;
+  var guess=(s.mode==='listen')?0.25:0;
+  return clamp(((s.correct[i]||0)/n-guess)/(1-guess),0,1);
+}
+/* 分界：第一个"认识率低于 50%"的难度段。
+   返回 LEVELS.length+1 表示测过的关全都过关（分界在最高关之上）。 */
+
+function findBoundary(s){
+  for(var i=1;i<=LEVELS.length;i++){
+    var r=rateAt(s,i);
+    if(r===null) continue;
+    if(r<0.5) return i;
+  }
+  return LEVELS.length+1;
+}
+/* 复核阶段还差哪一关的题：返回关号，都不用补了就返回 0
+   分界很靠前（小朋友认识的字很少）时，上面只摸 3 题，别让他连做一堆超纲字 */
+
+function topupNext(s){
+  var L=LEVELS.length, b=s.boundary;
+  var above=(b<=2)?3:TOP_ABOVE;
+  if(b<=1){
+    if((s.asked[1]||0)<TOPN) return 1;
+    if((s.asked[2]||0)<TOPN) return 2;
+    if((s.asked[3]||0)<above) return 3;
+    return 0;
+  }
+  if(b>L){
+    if((s.asked[L]||0)<TOPN) return L;
+    if((s.asked[L-1]||0)<TOPN) return L-1;
+    return 0;
+  }
+  if((s.asked[b]||0)<TOPN) return b;                     // 先把分界把关补足
+  if((s.asked[b-1]||0)<TOPN) return b-1;                 // 再把下面稳过的那关补足
+  if(b+1<=L && (s.asked[b+1]||0)<above) return b+1;      // 上面再摸几题，摸摸尾巴
+  if(b-2>=1 && (s.asked[b-2]||0)<3) return b-2;          // 小朋友年龄小，再往下垫一关
+  return 0;
+}
+/* 一组题打完后的判级：过关往上、没过往下（这就是"答错不结束、回头再测"的来源） */
+
+function stairDecide(s){
+  var c=s.curLevel, pass=(s.blockCorrect>=PASS_NEED);
+  s.blockAsked=0; s.blockCorrect=0;
+  var dir=pass?1:-1;
+  if(dir!==s.lastDir) s.reversals++;      // 折返次数 = 边界已经被夹住几次
+  s.lastDir=dir;
+
+  if(pass){
+    s.floorFails=0;
+    if(c>=LEVELS.length){ s.stopReason='ceiling'; s.done=true; return; }
+    s.curLevel=c+1;
+  }else{
+    if(c<=1){
+      s.curLevel=1;
+      // 连最低关都两个回合没过：确实到底了，别再耗着他
+      s.floorFails=(s.floorFails||0)+1;
+      if(s.floorFails>=2){ s.stopReason='floor'; s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s); return; }
+    }else{
+      s.curLevel=c-1;
+    }
+  }
+  // 已经一上一下折返过、且题量够了 → 分界夹住，转入回头复核
+  if(s.reversals>=2 && s.count>=18 && s.phase==='stair'){
+    s.phase='topup'; s.topupCount=0; s.boundary=findBoundary(s);
+  }
+}
+/* =========================================================================
+   句子认读模式：选句 + 结算
+   选句原则——围着"分界"选：优先挑包含最多"还没测过、且难度贴近分界"的字的句子。
+   一次读一句就能拿到十几个字的证据，比一句一题快十几倍。
+   已经测过的字再次出现，价值打折，避免一句话里反复浪费在同一个字上。
+   ========================================================================= */
+
+function sentTarget(s){
+  if(s.sentCount<SENT_WARM) return 2;             // 暖场：先来几句最浅的
+  var b=findBoundary(s);                          // 分界（第一个不过关的等级）
+  var step=2+Math.floor(s.sentCount/2);           // 台阶：每两句最多往上挪一级
+  return clamp(Math.min(b,step),1,LEVELS.length);
+}
+
+function pickSentence(s){
+  var target=sentTarget(s);
+  var best=null, bestScore=-1e9;
+  for(var i=0;i<SENTENCES.length;i++){
+    if(s.used[i]) continue;
+    var sen=SENTENCES[i], score=0;
+    for(var k=0;k<sen.uniq.length;k++){
+      var c=sen.uniq[k], L=LEVEL_OF[c]||1;
+      score += s.seen[c] ? SENT_SKIP : Math.max(0, 6-1.6*Math.abs(L-target));
+    }
+    score = score/Math.sqrt(sen.uniq.length) + Math.random()*0.5;
+    if(score>bestScore){ bestScore=score; best=i; }
+  }
+  return (best===null)?null:best;
+}
+
+function nextSentence(s){
+  if(s.sentCount>=SENT_MAX){ s.stopReason='limit'; s.done=true; return null; }
+  // 连最难的十星字都认下来了，再读下去也没多少新信息，早点收工
+  var top=LEVELS.length;
+  if(s.sentCount>=18 && (s.asked[top]||0)>=5 && (rateAt(s,top)||0)>=0.5){
+    s.stopReason='ceiling'; s.done=true; return null;
+  }
+  var idx=pickSentence(s);
+  if(idx===null){ s.stopReason='covered'; s.done=true; return null; }
+  s.used[idx]=1;
+  s.curSentence=SENTENCES[idx];
+  s.marks={};
+  return {level:s.curSentence.lv, ch:s.curSentence.t, sentence:true, sen:s.curSentence};
+}
+/* 一句读完：谁没认出来，家长就在 marks 里标一下（句内同一个字只算一次） */
+
+function submitSentence(s,marks){
+  if(!s.curSentence) return null;
+  var sen=s.curSentence, marked=0, known=0, fresh=0;
+  for(var k=0;k<sen.uniq.length;k++){
+    var c=sen.uniq[k];
+    if(s.seen[c]) continue;                       // 这个字之前统计过了，跳过
+    s.seen[c]=1;
+    var L=LEVEL_OF[c]||1;
+    s.asked[L]=(s.asked[L]||0)+1;
+    s.count++; fresh++;
+    if(marks&&marks[c]){ marked++; s.answers.push({level:L, ch:c, correct:false}); }
+    else { known++; s.correct[L]=(s.correct[L]||0)+1; }
+  }
+  s.stars+=known;
+  s.sentCount++;
+  s.curSentence=null; s.marks={};
+  return {marked:marked, known:known, fresh:fresh, sen:sen};
+}
+/* 家长想提前结束：把当前这句也算进去（标了的按不认识算） */
+
+function sentenceSeenCount(s){ return s.count||0; }
+
+function nextQuestion(s){
+  if(s.done) return null;
+  if(s.mode==='sentence') return nextSentence(s);
+  if(s.count>=MAX_Q){ s.stopReason='limit'; s.done=true; return null; }
+
+  if(s.phase==='warmup'){
+    s.q=makeQuestion(s,1);
+    return s.q;
+  }
+  if(s.phase==='stair'){
+    if(s.blockAsked>=BLOCK) stairDecide(s);
+    if(s.done) return null;
+    if(s.phase==='stair'){
+      if(!s.asked[s.curLevel]){ s.asked[s.curLevel]=0; s.correct[s.curLevel]=0; }
+      s.q=makeQuestion(s,s.curLevel);
+      return s.q;
+    }
+  }
+  if(s.phase==='topup'){
+    if(s.topupCount>=TOP_MAX){ s.stopReason='stable'; s.done=true; return null; }
+    s.boundary=findBoundary(s);
+    var need=topupNext(s);
+    if(!need){ s.stopReason='stable'; s.done=true; return null; }
+    s.topupCount++;
+    if(!s.asked[need]){ s.asked[need]=0; s.correct[need]=0; }
+    s.q=makeQuestion(s,need);
+    return s.q;
+  }
+  s.done=true;
+  return null;
+}
+
+function answerQuestion(s,correct){
+  if(!s.q) return null;
+  var q=s.q, lv=q.level;
+  s.count++;
+  s.answers.push({level:lv, ch:q.ch, correct:!!correct});
+  s.asked[lv]=(s.asked[lv]||0)+1;
+  if(correct){ s.correct[lv]=(s.correct[lv]||0)+1; s.stars++; }
+
+  if(s.phase==='warmup'){
+    s.warmupLeft--;
+    if(s.warmupLeft<=0){ s.phase='stair'; s.curLevel=2; s.blockAsked=0; s.blockCorrect=0; }
+  }else if(s.phase==='stair'){
+    s.blockAsked++;
+    if(correct) s.blockCorrect++;
+  }
+  s.q=null;
+  return {level:lv, correct:!!correct, ch:q.ch};
+}
+/* 识字量估算：
+   1) 把已测难度段的实测认识率（听音模式先去猜测校正）做加权逻辑曲线拟合；
+   2) 用拟合曲线给每一段一个认识率（已测段与实测值混合），未测段取曲线值；
+   3) 识字量 = Σ（每段认识率 × 该段字数）。
+   这样"边界之外"的字不会被打成 0，比单纯逐段相加更接近真实。
+
+   区间的算法（参数自助法）：
+   把每个已测段的实测认识率按它的抽样标准差随机抖一下，重新拟合曲线、重新求和，
+   重复几十次后取 10% 和 90% 分位。好处是自动体现了"曲线是被所有段一起钉住的"
+   这件事——逐段独立相加算出来的区间会宽出两倍多，因为忽略了段与段之间的约束。 */
+
+var BOOT_N=60, BOOT_SEED_FLOOR=0.08;
+
+function randn(){ return (Math.random()+Math.random()+Math.random()+Math.random()-2)*1.732; }
+
+function pointsOf(s){
+  var guess=(s.mode==='listen')?0.25:0;
+  var pts=[];
+  for(var i=1;i<=LEVELS.length;i++){
+    var n=s.asked[i]||0, k=s.correct[i]||0;
+    if(!n) continue;
+    var pr=clamp(k/n,BOOT_SEED_FLOOR,1-BOOT_SEED_FLOOR);
+    pts.push({i:i, n:n, k:k,
+              p:clamp((k/n-guess)/(1-guess),0,1),
+              se:Math.sqrt(pr*(1-pr)/n)/(1-guess)});
+  }
+  return pts;
+}
+
+function fitPoints(pts, fine){
+  if(!pts.length) return null;
+  var bs = fine?0.05:0.15, is = fine?0.1:0.25;
+  var best=null;
+  for(var b=FIT_BMIN;b<=FIT_BMAX+0.001;b+=bs){
+    for(var i0=0.4;i0<=12.61;i0+=is){
+      var err=0;
+      for(var t=0;t<pts.length;t++){
+        var f=1/(1+Math.exp(b*(pts[t].i-i0))), d=f-pts[t].p;
+        err+=pts[t].n*d*d;
+      }
+      if(best===null||err<best.e) best={e:err,b:b,i0:i0};
+    }
+  }
+  return {b:best.b, i0:best.i0, at:function(i){ return 1/(1+Math.exp(best.b*(i-best.i0))); }};
+}
+
+function fitCurve(s){ return fitPoints(pointsOf(s), true); }
+/* 给一批（等级, 认识率, 题数）算总识字量 */
+
+function totalOf(pts, fit){
+  var map={};
+  for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
+  var total=0;
+  for(var m=1;m<=LEVELS.length;m++){
+    var pt=map[m];
+    var mod=fit?fit.at(m):(pt?pt.p:0);
+    var wm=pt?pt.n/(pt.n+BLEND_N):0;
+    total += (pt?(wm*pt.p+(1-wm)*mod):mod)*LEVELS[m-1].size;
+  }
+  return total;
+}
+
+function bootstrapInterval(pts){
+  if(!pts.length) return [0,0];
+  var totals=[];
+  for(var r=0;r<BOOT_N;r++){
+    var pert=[];
+    for(var t=0;t<pts.length;t++){
+      var p=pts[t];
+      pert.push({i:p.i, n:p.n, p:clamp(p.p+randn()*p.se,0,1)});
+    }
+    totals.push(totalOf(pert, fitPoints(pert,false)));
+  }
+  totals.sort(function(a,b){return a-b;});
+  function q(f){ return totals[clamp(Math.round(f*(BOOT_N-1)),0,BOOT_N-1)]; }
+  return [q(0.10), q(0.90)];
+}
+
+function computeResult(s){
+  var guess=(s.mode==='listen')?0.25:0;
+  var pts=pointsOf(s);
+  var map={};
+  for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
+  var fit=fitPoints(pts, true);
+  var est=0, levels=[];
+  for(var m=1;m<=LEVELS.length;m++){
+    var size=LEVELS[m-1].size;
+    var pt=map[m];
+    var n=pt?pt.n:0, k=pt?pt.k:0;
+    var mes = pt ? clamp((k/n-guess)/(1-guess),0,1) : null;
+    var mod = fit ? fit.at(m) : (mes===null?0:mes);
+    // 实测题数越多越信实测，题少就更多听曲线的
+    var wm  = n ? n/(n+BLEND_N) : 0;
+    var pc  = n ? (wm*mes + (1-wm)*mod) : mod;
+    est+=pc*size;
+    levels.push({i:m, size:size, stars:LEVELS[m-1].stars, name:LEVELS[m-1].name, color:LEVELS[m-1].color,
+                 asked:n, correct:k, p:n?k/n:0, pc:pc});
+  }
+  // 区间：参数自助法（见上面的说明）
+  var iv=bootstrapInterval(pts);
+  var lo=iv[0], hi=iv[1];
+  // 自助法只反映"抽样带来的抖动"，反映不了"我们选的那条曲线形状本身可能不对"。
+  // 单字玩法一个段只有几题、更依赖外推，这层余量留大一点（数值是跑模拟标定的）。
+  var pad=Math.round(est*((s.mode==='sentence')?0.02:0.06));
+  lo-=pad; hi+=pad;
+  var starLevel=0;
+  for(var q2=0;q2<levels.length;q2++){ if(levels[q2].asked>0 && levels[q2].pc>=0.5) starLevel=levels[q2].i; }
+  var est10=Math.round(est/10)*10;
+  var lo10=Math.round(lo/10)*10, hi10=Math.round(hi/10)*10;
+  // 至少给一点宽度，别让区间看起来像精确值
+  if(hi10<est10+80) hi10=est10+80;
+  if(lo10>est10-80) lo10=Math.max(0,est10-80);
+  var wrong=[];
+  s.answers.forEach(function(a){ if(!a.correct && wrong.indexOf(a.ch)<0) wrong.push(a.ch); });
+  return {
+    est:est10, lo:Math.min(lo10,est10), hi:Math.min(5000,Math.max(hi10,est10)),
+    starLevel:starLevel, levels:levels, wrong:wrong,
+    count:s.count, askedTotal:s.count, correctTotal:s.stars,
+    stopReason:s.stopReason, mode:s.mode, sentCount:s.sentCount||0,
+    distinct:s.count
+  };
+}
+
+/* =========================================================================
+   SECTION: STORAGE
+   ========================================================================= */
+
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* =========================================================================
+   SECTION: AUDIO — 全部用 WebAudio 现场合成，不依赖任何外部文件
+   ========================================================================= */
+
+var PANDA_PARTS=[
+  {id:'body',   name:'身体',   emoji:'🧍', at:10,  tip:'豆豆长出身体啦！'},
+  {id:'armL',   name:'左手',   emoji:'🤚', at:24,  tip:'豆豆有左手了，可以抱你一下！'},
+  {id:'armR',   name:'右手',   emoji:'✋', at:40,  tip:'豆豆有两只手啦！'},
+  {id:'legL',   name:'左脚',   emoji:'🦶', at:58,  tip:'豆豆有脚了，能站起来啦！'},
+  {id:'legR',   name:'右脚',   emoji:'🦶', at:78,  tip:'豆豆会走路啦！'},
+  {id:'tail',   name:'小尾巴', emoji:'☁️', at:100, tip:'豆豆长出小尾巴啦！点一下豆豆，转过去看看～'},
+  {id:'shirt',  name:'小衣服', emoji:'👕', at:130, tip:'豆豆穿上新衣服啦！'},
+  {id:'scarf',  name:'围巾',   emoji:'🧣', at:165, tip:'豆豆围上了暖暖的围巾！'},
+  {id:'hat',    name:'小帽子', emoji:'🧢', at:205, tip:'豆豆戴上帽子，好神气！'},
+  {id:'glasses',name:'眼镜',   emoji:'👓', at:250, tip:'豆豆戴上眼镜，像个小博士！'},
+  {id:'bag',    name:'小书包', emoji:'🎒', at:300, tip:'豆豆背上小书包，要去上学啦！'},
+  {id:'crown',  name:'小皇冠', emoji:'👑', at:360, tip:'豆豆戴上皇冠，你就是识字小勇士！'},
+  /* —— 冬天的装备（跳跳的点子：天冷了要有毛线帽、手套、雪地靴） —— */
+  {id:'knitHat',name:'毛线帽', emoji:'🧶', at:400, tip:'豆豆戴上毛线帽，耳朵一下就暖和啦！', winter:1},
+  {id:'mitten', name:'小手套', emoji:'🧤', at:470, tip:'豆豆戴上小手套，手不冷啦！', winter:1},
+  {id:'earmuff',name:'耳罩',   emoji:'🎧', at:540, tip:'豆豆戴上了耳罩，暖烘烘！', winter:1},
+  {id:'boots',  name:'雪地靴', emoji:'🥾', at:610, tip:'豆豆穿上雪地靴，可以去踩雪啦！', winter:1},
+  {id:'coat',   name:'小棉袄', emoji:'🧥', at:690, tip:'豆豆穿上小棉袄，冬天也不怕冷！', winter:1}
+];
+
+function pandaUnlocked(total){
+  var out=[];
+  for(var i=0;i<PANDA_PARTS.length;i++){ if(total>=PANDA_PARTS[i].at) out.push(PANDA_PARTS[i].id); }
+  return out;
+}
+/* 下一个还没拿到的零件（全都拿到了返回 null） */
+
+function pandaNext(total){
+  for(var i=0;i<PANDA_PARTS.length;i++){ if(total<PANDA_PARTS[i].at) return PANDA_PARTS[i]; }
+  return null;
+}
+/* 本次认对了 n 个字：写回累计值，返回这次新长出来的零件列表 */
+
+/* 记一笔：在 before 的基础上增加 n 个字，返回 {after, fresh}
+   fresh = 这一笔新解锁的零件 id 数组。
+   小程序版改成纯函数（不直接读写存储），由调用方决定何时落盘。 */
+function pandaEarn(before, n){
+  before=before|0; n=n|0;
+  if(n<=0) return {after:before, fresh:[]};
+  var after=before+n;
+  var a=pandaUnlocked(before), b=pandaUnlocked(after), fresh=[];
+  for(var i=0;i<b.length;i++){ if(a.indexOf(b[i])<0) fresh.push(b[i]); }
+  return {after:after, fresh:fresh};
+}
+
+var SCENES=[
+  {id:'spring', name:'春天的小花园',   short:'春 · 花园', emoji:'🌸', at:0,   color:'#ffd15c',
+   tip:'豆豆住在春天的小花园里，遍地是小花 🌸'},
+  {id:'summer', name:'夏天的海边',     short:'夏 · 海边', emoji:'🏖️', at:150, color:'#5cb8ff',
+   tip:'豆豆搬去夏天的海边住啦，能听见海浪声 🏖️'},
+  {id:'autumn', name:'秋天的田野',     short:'秋 · 田野', emoji:'🍂', at:320, color:'#ff9f43',
+   tip:'豆豆走进秋天的田野，落叶飘啊飘 🍂'},
+  {id:'winter', name:'冬天的冰天雪地', short:'冬 · 雪地', emoji:'❄️', at:450, color:'#7fc4ff',
+   tip:'下雪啦！豆豆搬进了冰天雪地，快看窗外 ❄️'}
+];
+
+function sceneUnlocked(total){
+  var out=[];
+  for(var i=0;i<SCENES.length;i++){ if(total>=SCENES[i].at) out.push(SCENES[i]); }
+  return out.length?out:[SCENES[0]];
+}
+
+function sceneCur(total){ var u=sceneUnlocked(total); return u[u.length-1]; }
+
+function sceneNext(total){
+  for(var i=0;i<SCENES.length;i++){ if(total<SCENES[i].at) return SCENES[i]; }
+  return null;
+}
+
+/* —— 四季场景的背景画（viewBox 400x260，豆豆站在 y≈210 的地面上） —— */
+
+var CHEER=['太棒了！','真厉害！','好眼力！','这个字难不倒你！','超级棒！','你认识好多字呀！','哇，又对了！'];
+
+var SOFT=['没关系，这个字有点难','这个是新朋友，下次就认识啦','再看看哦，不着急','嗯，我们跳过它'];
+
+var PRAISE_END=['你坚持到底啦，真了不起！','今天的闯关全部完成！','豆豆给你鼓掌！'];
+
+function modeName(m){
+  return m==='read' ? '读一读' : (m==='sentence' ? '读句子' : '找一找');
+}
+
+function levelProgress(s){
+  if(s.mode==='sentence') return clamp(s.sentCount/SENT_MAX,0.02,0.97);
+  if(s.phase==='warmup') return clamp(s.count/3*0.07,0.01,0.07);
+  if(s.phase==='stair'){
+    var base=0.07+(s.curLevel-1)/LEVELS.length*0.60;
+    var within=((s.blockAsked||0)%BLOCK)/BLOCK*(0.60/LEVELS.length);
+    return clamp(base+within,0.07,0.70);
+  }
+  return clamp(0.72+(s.topupCount||0)/TOP_MAX*0.26,0.72,0.97);
+}
+
+/* ---- 导出 ---- */
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, FIT_BMIN, WARM_N, TOPN, BLEND_N, SENT_WARM, SENT_MAX, SENT_SKIP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, BOOT_N, randn, pointsOf, fitPoints, fitCurve, totalOf, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };

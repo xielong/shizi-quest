@@ -1,0 +1,63 @@
+/* ---------- 结果页 ---------- */
+.hero { text-align: center; }
+.hero-title { font-size: 32rpx; font-weight: 900; color: #71809e; }
+.hero-num { margin: 10rpx 0 4rpx; }
+.big { font-size: 130rpx; font-weight: 900; color: #2b3a55; line-height: 1.1; }
+.unit { font-size: 34rpx; color: #71809e; margin-left: 8rpx; font-weight: 800; }
+.rng { color: #71809e; font-size: 26rpx; }
+.starrow { margin-top: 14rpx; font-size: 36rpx; letter-spacing: 4rpx; }
+.st { color: #e3e9f4; }
+.st.on { color: #ffc93c; }
+.leveltext { margin-top: 14rpx; }
+
+.h3 { font-size: 32rpx; font-weight: 900; margin-bottom: 10rpx; }
+
+/* 迷你世界 */
+.world.mini { position: relative; height: 380rpx; border-radius: 32rpx; overflow: hidden; margin-top: 22rpx; }
+.world.mini .world-mascot { bottom: 70rpx; width: 180rpx; height: 240rpx; margin-left: -90rpx; }
+
+/* 零件墙 / 场景墙 */
+.pw { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 22rpx; }
+.pw-item {
+  width: calc(100% / 6 - 10rpx); background: #f5f8fd; border: 3rpx solid #eef2fa;
+  border-radius: 18rpx; padding: 14rpx 4rpx; text-align: center; opacity: .35;
+}
+.pw.four .pw-item { width: calc(25% - 9rpx); }
+.pw-item.on { opacity: 1; background: #fff; border-color: #e6ecf8; }
+.pw-item.fresh { border-color: #4fd6a4; background: #ecfbf5; animation: popIn .4s ease both; }
+.pw-item .e { font-size: 40rpx; line-height: 1.3; }
+.pw-item .n { font-size: 21rpx; color: #71809e; margin-top: 4rpx; }
+
+/* 条形图 */
+.barrow { display: flex; align-items: center; gap: 14rpx; margin-top: 12rpx; }
+.barrow .lb { width: 76rpx; font-size: 24rpx; color: #71809e; font-weight: 700; }
+.barrow .tr { flex: 1; height: 26rpx; background: #f1f5fc; border-radius: 999rpx; overflow: hidden; }
+.barrow .fill { height: 100%; border-radius: 999rpx; min-width: 0; transition: width .6s ease; }
+.barrow .pc { width: 96rpx; text-align: right; font-size: 24rpx; font-weight: 800; color: #2b3a55; }
+.barrow .n { width: 96rpx; text-align: right; font-size: 22rpx; color: #a5b1c9; }
+
+/* 参考表 */
+.ref { margin-top: 8rpx; }
+.refrow {
+  display: flex; justify-content: space-between; padding: 14rpx 8rpx;
+  border-bottom: 2rpx solid #f1f5fc; font-size: 27rpx; color: #2b3a55;
+}
+.refrow:last-child { border-bottom: 0; }
+.refrow.self { color: #2f8fd6; font-weight: 900; }
+
+/* 生字 chips */
+.wordchips { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 20rpx; }
+.wordchip {
+  background: #fff7ef; border: 3rpx solid #ffd9c4; color: #e07b4e;
+  border-radius: 18rpx; padding: 14rpx 22rpx; font-size: 40rpx; font-weight: 800;
+}
+
+/* 奖状 */
+.cert {
+  border: 6rpx solid #ffd15c; border-radius: 28rpx; padding: 40rpx 24rpx;
+  text-align: center; background: linear-gradient(180deg, #fffdf4, #fff8e2);
+}
+.cert .t { font-size: 44rpx; font-weight: 900; letter-spacing: 8rpx; color: #c98a12; }
+.cert .n { font-size: 56rpx; font-weight: 900; color: #2b3a55; margin-top: 16rpx; }
+.cert .d { font-size: 26rpx; color: #a5854a; margin-top: 10rpx; }
+.cert-tip { margin-top: 20rpx; font-size: 24rpx; color: #c98a12; font-weight: 800; }

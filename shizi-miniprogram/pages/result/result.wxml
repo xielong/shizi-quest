@@ -1,0 +1,95 @@
+<view class="page">
+  <!-- 识字量 -->
+  <view class="card hero">
+    <view class="hero-title">{{name}} 的识字量约</view>
+    <view class="hero-num"><text class="big">{{shownEst}}</text><text class="unit">字</text></view>
+    <view class="rng">合理区间 {{r.lo}} ~ {{r.hi}} 字</view>
+    <view class="starrow">
+      <text wx:for="{{starStars}}" wx:key="i" class="st {{item.on?'on':''}}">★</text>
+    </view>
+    <view class="muted leveltext">{{levelText}}</view>
+  </view>
+
+  <!-- 豆豆长大了多少 -->
+  <view class="card">
+    <view class="h3">豆豆长大了多少</view>
+    <view class="muted">{{pandaText}}</view>
+    <view class="world mini">
+      <image class="world-bg" src="{{sceneSrc}}" mode="aspectFill" />
+      <view wx:if="{{snow.length}}" class="snowfall">
+        <view wx:for="{{snow}}" wx:key="k" class="flake"
+          style="left:{{item.left}}%;width:{{item.size}}rpx;height:{{item.size}}rpx;opacity:{{item.op}};animation-duration:{{item.dur}}s;animation-delay:{{item.delay}}s"></view>
+      </view>
+      <view class="world-mascot" bindtap="turnPanda">
+        <image wx:for="{{panda}}" wx:key="id" class="panda-layer" src="{{item.src}}" />
+      </view>
+      <view class="world-tag">{{sceneTag}}</view>
+    </view>
+    <view class="pw">
+      <view wx:for="{{parts}}" wx:key="id" class="pw-item {{item.on?'on':''}} {{item.fresh?'fresh':''}}">
+        <view class="e">{{item.emoji}}</view><view class="n">{{item.name}}</view>
+      </view>
+    </view>
+    <view class="muted" style="margin-top:26rpx">{{worldNote}}</view>
+    <view class="pw four">
+      <view wx:for="{{scenes}}" wx:key="id" class="pw-item {{item.on?'on':''}} {{item.fresh?'fresh':''}}">
+        <view class="e">{{item.emoji}}</view><view class="n">{{item.short}}</view>
+      </view>
+    </view>
+    <view class="muted" style="margin-top:18rpx">每认对一些字，豆豆就长出一个新零件、还会搬去新的地方住，成绩会一直存着——下次来玩他还在，而且会更完整。</view>
+  </view>
+
+  <!-- 各难度段表现 -->
+  <view class="card">
+    <view class="h3">各难度段表现</view>
+    <view class="bars">
+      <view wx:for="{{bars}}" wx:key="i" class="barrow">
+        <text class="lb">{{item.stars}}星</text>
+        <view class="tr"><view class="fill" style="width:{{item.w}}%;background:{{item.color}}"></view></view>
+        <text class="pc">{{item.pcText}}</text>
+        <text class="n">{{item.nText}}</text>
+      </view>
+    </view>
+    <view class="muted" style="margin-top:16rpx">{{barsNote}}</view>
+  </view>
+
+  <!-- 同龄参考 -->
+  <view class="card">
+    <view class="h3">和同龄小朋友比一比</view>
+    <view class="ref">
+      <view wx:for="{{refRows}}" wx:key="i" class="refrow {{item.self?'self':''}}">
+        <text>{{item.label}}</text><text>{{item.range}}</text>
+      </view>
+    </view>
+    <view class="muted" style="margin-top:14rpx">参考区间为常见经验值，仅供家长心里有个大致坐标，不是标准答案。</view>
+  </view>
+
+  <!-- 生字复习 -->
+  <view class="card">
+    <view class="h3">这些字还不认识</view>
+    <view class="muted">把没认出来的字变成"新朋友"，下次见到就认识啦。别批评，一起念念就好。</view>
+    <view class="wordchips" wx:if="{{wrong.length}}">
+      <view wx:for="{{wrong}}" wx:key="*this" class="wordchip" data-c="{{item}}" bindtap="showWord">{{item}}</view>
+    </view>
+    <view class="muted" wx:else style="margin-top:12rpx">这次几乎没有不认识的字，太厉害了！</view>
+  </view>
+
+  <!-- 奖状 -->
+  <view class="card">
+    <view class="cert">
+      <view class="t">识 字 小 勇 士</view>
+      <view class="n">{{name}}</view>
+      <view class="d">{{certMeta}}</view>
+      <view class="cert-tip">豆豆说：你认识的字比上次又多啦！</view>
+    </view>
+    <view class="row" style="margin-top:26rpx;gap:18rpx">
+      <button class="btn warm" style="flex:1" bindtap="again">再玩一次</button>
+      <button class="btn ghost" style="flex:1" bindtap="goHome">回首页</button>
+    </view>
+    <view class="row" style="margin-top:18rpx;gap:18rpx">
+      <button class="btn mini" style="flex:1" bindtap="copyResult">{{copied?'已复制 ✓':'复制成绩发给家人'}}</button>
+      <button class="btn mini" style="flex:1" bindtap="goHistory">看成长记录</button>
+    </view>
+    <view class="muted center" style="margin-top:18rpx">想留个纪念？截屏这个页面就是一张奖状。</view>
+  </view>
+</view>

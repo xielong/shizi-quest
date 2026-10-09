@@ -1,0 +1,23 @@
+<view class="page">
+  <view class="card">
+    <view wx:if="{{hasChart}}" class="chartwrap">
+      <canvas type="2d" id="chart" class="chart"></canvas>
+    </view>
+    <view wx:else class="muted center" style="padding:16rpx 0 26rpx">再测一次就能看到成长曲线啦。</view>
+
+    <view wx:if="{{!hist.length}}" class="muted center" style="padding:30rpx 0">
+      还没有记录，先去做一次测试吧。
+    </view>
+
+    <view wx:for="{{rows}}" wx:key="ts" class="histitem">
+      <text class="dt">{{item.date}}</text>
+      <text class="who">{{item.who}}</text>
+      <text class="es">{{item.est}} 字</text>
+      <text class="st">★{{item.stars}}</text>
+    </view>
+
+    <view wx:if="{{hist.length}}" style="margin-top:30rpx">
+      <button class="btn ghost" bindtap="clearHist">清空记录</button>
+    </view>
+  </view>
+</view>

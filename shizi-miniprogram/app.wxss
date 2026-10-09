@@ -1,0 +1,109 @@
+/* =========================================================================
+   app.wxss —— 全局样式（配色与圆角、按钮体系照搬网页版，尺寸统一按 2 倍换算成 rpx）
+   ========================================================================= */
+page {
+  --ink: #2b3a55;
+  --ink-soft: #71809e;
+  --line: #e6ecf8;
+  --sky: #5cb8ff;
+  --sun: #ffc93c;
+  --coral: #ff8f7a;
+  --mint: #4fd6a4;
+  --lav: #a98bff;
+  --ok: #25b981;
+  --no: #ff9a76;
+
+  background: #f7fbff;
+  color: #2b3a55;
+  font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 30rpx;
+  line-height: 1.6;
+}
+
+view, text, button, input { box-sizing: border-box; }
+
+/* 页面容器：留出底部安全区 */
+.page {
+  padding: 24rpx 28rpx calc(40rpx + env(safe-area-inset-bottom));
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: #fff;
+  border-radius: 44rpx;
+  padding: 34rpx;
+  box-shadow: 0 20rpx 48rpx rgba(96, 124, 178, .13), 0 4rpx 12rpx rgba(96, 124, 178, .08);
+}
+.card + .card { margin-top: 24rpx; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  padding: 28rpx 48rpx;
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #63c0ff, #3ea6ff);
+  box-shadow: 0 10rpx 0 #2b8fe0, 0 20rpx 34rpx rgba(62, 166, 255, .28);
+  line-height: 1.2;
+  border: 0;
+}
+.btn:active { transform: translateY(6rpx); box-shadow: 0 4rpx 0 #2b8fe0, 0 10rpx 20rpx rgba(62, 166, 255, .25); }
+/* 小程序 button 自带样式需要覆盖 */
+button.btn { width: 100%; }
+button.btn::after { border: 0; }
+
+.btn.ghost {
+  background: #fff;
+  color: #2b3a55;
+  border: 4rpx solid #e6ecf8;
+  box-shadow: 0 8rpx 0 #e8eefb;
+}
+.btn.ghost:active { box-shadow: 0 2rpx 0 #e8eefb; }
+
+.btn.warm {
+  background: linear-gradient(180deg, #ffd15c, #ffb52e);
+  box-shadow: 0 10rpx 0 #e39a13, 0 20rpx 34rpx rgba(255, 181, 46, .3);
+}
+.btn.mint {
+  background: linear-gradient(180deg, #6ee7bc, #35c99a);
+  box-shadow: 0 10rpx 0 #22a87e, 0 20rpx 34rpx rgba(53, 201, 154, .28);
+}
+.btn.small { padding: 20rpx 36rpx; font-size: 30rpx; box-shadow: 0 8rpx 0 #2b8fe0; }
+.btn.mini {
+  padding: 16rpx 28rpx; font-size: 28rpx; font-weight: 700;
+  background: #fff; color: #71809e; border: 4rpx solid #e6ecf8; box-shadow: 0 6rpx 0 #e8eefb;
+}
+
+/* ---------- 排版 ---------- */
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.spacer { flex: 1; }
+.muted { color: #71809e; font-size: 26rpx; line-height: 1.7; }
+.bold { font-weight: 800; }
+.center { text-align: center; }
+
+/* ---------- 通用动画 ---------- */
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(20rpx) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+.pop { animation: popIn .32s ease both; }
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10rpx); }
+}
+
+@keyframes floatUp {
+  0% { opacity: 0; transform: translate(-50%, 20rpx) scale(.7); }
+  30% { opacity: 1; transform: translate(-50%, -10rpx) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -120rpx) scale(1); }
+}
+
+/* 进度条 */
+.bar { height: 18rpx; background: #eef3fd; border-radius: 999rpx; overflow: hidden; }
+.bar > view { height: 100%; border-radius: 999rpx; background: linear-gradient(90deg, #63c0ff, #a98bff); transition: width .3s ease; }

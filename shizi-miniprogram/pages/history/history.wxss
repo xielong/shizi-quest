@@ -1,0 +1,14 @@
+/* ---------- 成长记录 ---------- */
+.chartwrap { padding: 8rpx 0 16rpx; }
+.chart { width: 100%; height: 440rpx; }
+
+.histitem {
+  display: flex; align-items: center; gap: 16rpx;
+  padding: 20rpx 6rpx; border-bottom: 2rpx solid #f1f5fc;
+  font-size: 26rpx;
+}
+.histitem:last-child { border-bottom: 0; }
+.histitem .dt { color: #71809e; width: 170rpx; }
+.histitem .who { flex: 1; color: #2b3a55; font-weight: 700; }
+.histitem .es { font-weight: 900; color: #2b3a55; }
+.histitem .st { color: #e8a900; font-weight: 800; width: 90rpx; text-align: right; }

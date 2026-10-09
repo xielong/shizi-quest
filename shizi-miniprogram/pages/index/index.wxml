@@ -1,0 +1,70 @@
+<view class="page">
+  <view class="brand">
+    <view class="brand-title">识字大冒险</view>
+    <view class="brand-sub">玩个游戏，看看小朋友认识多少字</view>
+  </view>
+
+  <view class="bubble-row"><view class="bubble pop">{{bubble}}</view></view>
+
+  <!-- 豆豆的小世界舞台 -->
+  <view class="world">
+    <image class="world-bg" src="{{sceneSrc}}" mode="aspectFill" />
+    <view wx:if="{{snow.length}}" class="snowfall">
+      <view wx:for="{{snow}}" wx:key="k" class="flake"
+        style="left:{{item.left}}%;width:{{item.size}}rpx;height:{{item.size}}rpx;opacity:{{item.op}};animation-duration:{{item.dur}}s;animation-delay:{{item.delay}}s"></view>
+    </view>
+    <view class="world-mascot {{turnCls}}" bindtap="turnPanda">
+      <image wx:for="{{panda}}" wx:key="id" class="panda-layer" src="{{item.src}}" />
+    </view>
+    <view class="world-tag">{{sceneTag}}</view>
+    <view class="world-hint">{{turnHint}}</view>
+  </view>
+
+  <!-- 养成进度 -->
+  <view class="pp">
+    <view class="bar"><view style="width:{{ppPct}}%"></view></view>
+    <view class="pp-text">{{ppText}}</view>
+    <view class="chips">
+      <text wx:for="{{chips}}" wx:key="id" class="chip2 {{item.on?'on':''}}">{{item.emoji}}</text>
+    </view>
+    <view class="pp-world">{{worldLine}}</view>
+  </view>
+
+  <!-- 名字 / 年龄 / 玩法 -->
+  <view class="card">
+    <view class="field">
+      <view class="label">小朋友的名字</view>
+      <input class="inp" value="{{name}}" maxlength="8" placeholder="写个小名就好" bindinput="onName" />
+    </view>
+    <view class="field">
+      <view class="label">几岁啦</view>
+      <picker mode="selector" range="{{ages}}" value="{{ageIdx}}" bindchange="onAge">
+        <view class="inp">{{ages[ageIdx]}} 岁 ▾</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="label">选一个玩法</view>
+      <view class="modes">
+        <view class="mode {{mode=='read'?'on':''}}" data-mode="read" bindtap="pickMode">
+          <view class="mt">读一读 <text class="tagline">推荐</text></view>
+          <view class="md">出现一个字，小朋友读出来，家长点「认识 / 不认识」。最准的玩法。</view>
+        </view>
+        <view class="mode {{mode=='listen'?'on':''}}" data-mode="listen" bindtap="pickMode">
+          <view class="mt">找一找</view>
+          <view class="md">家长念一个字，小朋友从 4 个字里点出它。孩子自己也能玩。</view>
+        </view>
+        <view class="mode wide {{mode=='sentence'?'on':''}}" data-mode="sentence" bindtap="pickMode">
+          <view class="mt">读句子 <text class="tagline">最全面</text></view>
+          <view class="md">出现一句话，小朋友读出来，家长把没念出来的字点一下。一句能测十来个字，读几十句就很准了。</view>
+        </view>
+      </view>
+    </view>
+    <button class="btn" style="margin-top:28rpx" bindtap="start">开始闯关 ★</button>
+    <view class="row" style="margin-top:20rpx;gap:16rpx">
+      <button class="btn mini" style="flex:1" bindtap="goHelp">家长看这里（原理）</button>
+      <button class="btn mini" style="flex:1" bindtap="goHistory">成长记录</button>
+    </view>
+  </view>
+
+  <view class="muted center foot-note">读一读 / 找一找约 3~6 分钟 · 读句子约 6~10 分钟 · 全程无倒计时 · 随时可以停</view>
+</view>

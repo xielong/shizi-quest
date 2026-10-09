@@ -1,0 +1,74 @@
+<view class="page">
+  <view class="topbar">
+    <view class="tchip star">★ {{stars}}</view>
+    <view class="tchip">{{lvChip}}</view>
+    <view class="spacer"></view>
+    <button class="btn mini" bindtap="quit">退出</button>
+  </view>
+  <view class="bar prog"><view style="width:{{prog}}%"></view></view>
+  <view class="lvrow">
+    <text class="lvtext">{{progText}}</text>
+    <text class="muted">{{qText}}</text>
+  </view>
+
+  <view class="stage card">
+    <view class="prompt">{{prompt}}</view>
+
+    <!-- qKey 变化时强制重建节点，入场动画才会重播 -->
+    <block wx:for="{{[qKey]}}" wx:key="*this">
+      <!-- 读一读：一个大字 -->
+      <view wx:if="{{q.type=='read'}}" class="glyphwrap">
+        <view class="glyph">{{q.ch}}</view>
+      </view>
+
+      <!-- 找一找：4 个字 -->
+      <view wx:if="{{q.type=='listen'}}" class="optgrid">
+        <view wx:for="{{q.options}}" wx:key="ch"
+          class="opt {{item.cls}}" data-ch="{{item.ch}}" bindtap="onOption">{{item.ch}}</view>
+      </view>
+      <view wx:if="{{q.type=='listen'}}" class="listen-note">请家长大声念出这个字，小朋友来找</view>
+
+      <!-- 读句子：整句点选 -->
+      <view wx:if="{{q.type=='sentence'}}" class="sent">
+        <text wx:for="{{q.cells}}" wx:key="idx"
+          class="c {{item.punc?'punc':''}} {{item.unk?'unk':''}}"
+          data-idx="{{item.idx}}" bindtap="toggleMark">{{item.ch}}</text>
+      </view>
+    </block>
+
+    <view class="fbrow">
+      <view wx:if="{{fbText}}" class="fb {{fbCls}}">{{fbText}}</view>
+    </view>
+  </view>
+
+  <!-- 读一读：家长判分 -->
+  <view wx:if="{{q.type=='read'}}" class="parentbar">
+    <button class="judge yes" bindtap="judgeYes">认识 ✓</button>
+    <button class="judge no" bindtap="judgeNo">不认识 ✗</button>
+  </view>
+
+  <!-- 读句子：提交 -->
+  <view wx:if="{{q.type=='sentence'}}" class="sentbar">
+    <button class="btn ghost" style="flex:1" bindtap="resetMarks">重标</button>
+    <button class="btn {{marksN>0?'warm':''}}" style="flex:2" bindtap="commitSentence">{{doneText}}</button>
+  </view>
+
+  <view class="mini">{{miniHint}}</view>
+
+  <!-- 右下角实时长大的豆豆 -->
+  <view class="mini-panda" bindtap="turnMini">
+    <image wx:for="{{mini}}" wx:key="id" class="panda-layer" src="{{item.src}}" />
+  </view>
+
+  <!-- 新零件喜报 -->
+  <view wx:if="{{toast}}" class="panda-toast">
+    <view class="pt-e">{{toast.emoji}}</view>
+    <view class="pt-tip">{{toast.tip}}</view>
+  </view>
+
+  <!-- 冬天：全屏飘雪 -->
+  <view wx:if="{{testSnow.length}}" class="snowfull">
+    <view wx:for="{{testSnow}}" wx:key="k" class="flake"
+      style="left:{{item.left}}%;width:{{item.size}}rpx;height:{{item.size}}rpx;opacity:{{item.op}};animation-duration:{{item.dur}}s;animation-delay:{{item.delay}}s"></view>
+  </view>
+</view>
