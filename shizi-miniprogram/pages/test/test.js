@@ -252,7 +252,7 @@ Page({
     if (!s) return;
     var r = E.computeResult(s);
     this._askMore = this._askMore || 0;
-    if (r.enough || r.topOut || this._askMore >= 3) { this.finish(); return; }
+    if (r.enough || this._askMore >= 3) { this.finish(); return; }
     this._askMore++;
     /* 就差临门一脚（1~2 个字）：别为这点事弹窗打扰家长，直接接着出题 */
     if (r.needN <= 2) { E.extendSession(s, r.needN); this.step(); return; }
@@ -279,9 +279,20 @@ Page({
     if (!s) return;
     var r = E.computeResult(s);
 
+    /* 「至少」棘轮：全对的轮次证明过"至少 N"，把这个下限存起来；
+       之后任何一轮显示的数字都不低于它（跨轮折价会让估算小幅波动，
+       但已证明的下限不该往回缩，家长看着数字变少会不信任） */
+    var floor = (s.prior && s.prior.lbFloor) || 0;
+    if (r.enough && r.allOk && r.est > floor) floor = r.est;
+    if (r.enough && floor > r.est) {
+      r.est = floor;
+      if (r.hi < floor) r.hi = floor;
+      r.floored = true;
+    }
+
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
-    store.setPrior(s.mode, E.priorNext(s));
+    store.setPrior(s.mode, E.priorNext(s, floor));
 
     /* 这次认对的字记到豆豆账上（一场题少，每个字按 EARN_RATE 点算，长大节奏跟以前持平）
        注意：样本不够、不出分数的时候，豆豆照样长大——孩子认真答了就该有奖励 */

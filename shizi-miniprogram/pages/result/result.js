@@ -37,6 +37,8 @@ Page({
        或者（旧版本的毛病）看着数字贴到 5000 一头雾水。 */
     var topOut = !!r.topOut;
     var noMiss = (r.misses === 0 && r.count > 0 && !topOut);
+    /* 棘轮生效：这轮估出的数比历史「至少」下限还低，显示历史下限（见 test.js finish） */
+    var floored = !!r.floored;
     /* 样本够不够：累计测满 MIN_TESTED 个字才出分数。
        不够的时候整页都不显示数字 —— 只答了几道题，算出来的"识字量"没有意义，
        家长要看到的是"还需要再多答几道"。 */
@@ -61,8 +63,9 @@ Page({
     /* 没答错过 → 数字是下限，得说清楚（这也是家长看到的"怎么才这么点/怎么贴顶"的答案） */
     var noMissText = noMiss
       ? ('他这轮 ' + r.count + ' 题一道都没答错，说明还没摸到"他认不出的那条线"，'
-         + '所以上面这个数字是保守下限（至少这么多），不是精确值。'
-         + '想看得更准：用同一种玩法再玩一两轮，前面的证据会累加进来；'
+         + '所以上面这个数字是保守下限（至少这么多），不是精确值——'
+         + '每一段都按"证据能证明的下限"折算，宁可少报。'
+         + '想看得更准：用同一种玩法再玩一两轮，前面的证据会累加进来，这个下限会自己往上走；'
          + '或者一次多玩几题，等他碰到认不出的字，分界才会露出来。')
       : '';
     var levelText;
@@ -115,6 +118,10 @@ Page({
     var barsNote = isSent
       ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。题数把前面几轮也一起算进来了，所以可能比这一轮做的多。标「未测」的难度段这一轮没出到题，估算时不给它加分——所以上面的数字不会凭想象往上飘。'
       : '颜色越长表示这一段的字认识得越多；题数是"这一轮 + 前面几轮"合起来的（一场题少，靠多轮累积看趋势）。标「未测」的难度段这一轮没出到题，估算时不给它加分——所以上面的数字不会凭想象往上飘。';
+    if (r.allOk) {
+      barsNote += ' 这轮一道没错：每段按小样本的置信下限折算（宁可少报），'
+        + '所以长条不到 100% 是正常的——画出来的是"证据确凿"的部分。';
+    }
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {
@@ -126,7 +133,7 @@ Page({
       name: profile.name,
       r: r,
       heroTitle: enough
-        ? (profile.name + ' 的识字量' + ((topOut || noMiss) ? '至少' : '约'))
+        ? (profile.name + ' 的识字量' + ((topOut || noMiss || floored) ? '至少' : '约'))
         : ('还差 ' + r.needN + ' 个字就能出分数'),
       starStars: starStars,
       levelText: levelText,
@@ -134,7 +141,7 @@ Page({
       noMiss: noMiss,
       enough: enough,
       shortText: shortText,
-      estWord: (topOut || noMiss) ? '至少' : '约',
+      estWord: (topOut || noMiss || floored) ? '至少' : '约',
       accumText: accumText, roughText: roughText, noMissText: noMissText,
       pandaText: pandaText,
       panda: P.layers(total, 'front'),
@@ -194,7 +201,7 @@ Page({
   copyResult: function () {
     var r = this.data.r, profile = app.profile();
     var isSent = r.mode === 'sentence';
-    var lowB = !!(r.topOut || (r.misses === 0 && r.count > 0));   // 没答错过 = 下限口径
+    var lowB = !!(r.topOut || r.floored || (r.misses === 0 && r.count > 0));   // 没答错过/棘轮保底 = 下限口径
     var howMany = isSent
       ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字')
       : ('共 ' + r.count + ' 题');

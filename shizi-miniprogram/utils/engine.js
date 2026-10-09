@@ -222,7 +222,7 @@ function priorCount(p){
 /* 一轮结束：把"合起来的总证据"折价成下一轮的先验。
    rounds 记的是"这份证据一共攒了几轮"、tested 记的是"累计测过多少个字"，
    两个都只用来给家长看和判"样本够不够"，不参与识字量计算 */
-function priorTrim(asked, correct, rounds, tested){
+function priorTrim(asked, correct, rounds, tested, lbFloor){
   asked=asked||{}; correct=correct||{};
   var A={}, C={};
   for(var i=1;i<=LEVELS.length;i++){
@@ -233,13 +233,17 @@ function priorTrim(asked, correct, rounds, tested){
     A[i]=n;
     C[i]=Math.round(n0?((correct[i]||0)/n0)*n:0);
   }
-  return {asked:A, correct:C, rounds:Math.max(1,rounds||1), tested:Math.max(0,tested||0)};
+  return {asked:A, correct:C, rounds:Math.max(1,rounds||1), tested:Math.max(0,tested||0),
+          lbFloor:Math.max(0,lbFloor||0)};
 }
 /* 一轮结束时的收尾动作：先并（先验 + 本轮）、再折价，并把累计字数带上。
-   调用方一句 store.setPrior(mode, E.priorNext(s)) 就够。 */
-function priorNext(s){
+   lbFloor 是「至少」棘轮：全对轮证明过的下限存进先验，之后任何一轮的
+   显示都不低于它（下限一旦被证据证明就一直成立，不会"玩着玩着变少"）。
+   调用方一句 store.setPrior(mode, E.priorNext(s, floor)) 就够。 */
+function priorNext(s, lbFloor){
+  if(lbFloor===undefined) lbFloor=(s.prior&&s.prior.lbFloor)||0;
   var mc=priorMerge(s);
-  return priorTrim(mc.asked, mc.correct, (s.priorRounds||0)+1, testedTotal(s));
+  return priorTrim(mc.asked, mc.correct, (s.priorRounds||0)+1, testedTotal(s), lbFloor);
 }
 /* 先验 + 本轮实测 = 这一轮拿来估算的全部证据 */
 function priorMerge(s){
@@ -351,9 +355,14 @@ function topupNext(s){
     return 0;
   }
   if(b>L){
-    if((s.asked[L]||0)<topn) return L;
-    if((s.asked[L-1]||0)<topn) return L-1;
-    return 0;
+    /* 分界在最高关之上（这一轮全对）：优先补"合并证据最薄的段"（第 6 关起），
+       而不是只补最上面两关——高分段每段字数大，证据薄还按满折，数字会虚高 */
+    var thin=0, tn=1e9, pm=(s.prior&&s.prior.asked)||{};
+    for(var m2=6;m2<=L;m2++){
+      var mn=(s.asked[m2]||0)+(pm[m2]||0);
+      if(mn<Math.min(topn,5) && mn<tn){ tn=mn; thin=m2; }
+    }
+    return thin;
   }
   if((s.asked[b]||0)<topn) return b;                     // 先把分界把关补足
   if((s.asked[b-1]||0)<topn) return b-1;                 // 再把下面稳过的那关补足
@@ -373,8 +382,10 @@ function stairDecide(s){
   if(pass){
     s.floorFails=0;
     // 一组全对说明这一关太轻松，直接往上跳两关：题量省下来，
-    // 也更容易摸到高难度那几关（不然题量上限一到就停在半路，估算只能靠外推）
-    var jump=aced?2:1, next=c+jump;
+    // 也更容易摸到高难度那几关（不然题量上限一到就停在半路，估算只能靠外推）。
+    // 但只在低分段跳（落点不超过第 6 关）：再往上每段的字数大，跳过去留空档
+    // 就等于零证据白给分——这是 2026-10 家长反馈"全对就 5000"的一条根因
+    var jump=(aced&&c+2<=6)?2:1, next=c+jump;
     if(next>LEVELS.length) next=LEVELS.length;
     if(next===c){
       /* 已经站在最高关、又过关了：不再往上跳，直接转回头复核。
@@ -414,7 +425,11 @@ function sentTarget(s){
   var base=(s.priorBoundary>0)?clamp(s.priorBoundary-2,1,LEVELS.length):2;
   if(s.sentCount<SENT_WARM) return base;
   var b=findBoundary(s);                          // 分界（第一个不过关的等级）
-  var step=base+Math.floor(s.sentCount/2);        // 台阶：每两句最多往上挪一级
+  /* 一句都没标过"不认识" → 台阶每句升一级（句子题库的字集中在低段，爬得慢的话
+     高分段全靠运气覆盖，全对时数字给不高也说不清）；有标过就维持每两句升一级 */
+  var marked=0, k;
+  for(k in s.asked){ if(Object.prototype.hasOwnProperty.call(s.asked,k)) marked+=(s.asked[k]||0)-((s.correct&&s.correct[k])||0); }
+  var step=base+Math.floor(s.sentCount/(marked===0?1:2));
   return clamp(Math.min(b,step),1,LEVELS.length);
 }
 
@@ -587,7 +602,8 @@ var EXTRAP_DECAY=0.6;
      · 读句子：一轮通常就能测到 40 个字上下 → 直接出分数
      · 读一读/找一找：一轮 12 题 = 12 个字 → 第一轮不够，**第二轮累积起来就够**
        （跨轮累积见 SECTION: PRIOR，`tested` 字段记的就是累计测过多少字）
-     · 例外：真的一路全对闯到最高关并答对 → 证据已经足够决定性，照样给分数
+     · 全对的孩子也一样卡这条线：全对恰恰说明还没摸到他"认不出"的那条线，
+       更该多答几道；答满 MIN_TESTED 个字还是全对，才轮到"至少 5000"这个口径
    ========================================================================= */
 
 var MIN_TESTED=20;
@@ -678,7 +694,25 @@ function bootstrapInterval(pts, extra){
 
 function computeResult(s){
   var guess=(s.mode==='listen')?0.25:0;
+  var wrong=[], misses=0;
+  s.answers.forEach(function(a){
+    if(!a.correct){ misses++; if(wrong.indexOf(a.ch)<0) wrong.push(a.ch); }
+  });
+  /* 一道没错（allOk）→ 还没摸到"认不出"的那条线，数字只能按下限口径给：
+     每个已测段按 Wilson 一侧80%置信下限折算（测2题的段只按约55%、5题约79%），
+     没出题的空档段按两边下限里小的补。这跟自适应测试（CAT）的惯例一致：
+     能力超出题库范围时不给点估计，只报"至少 X"。
+     有答错的孩子不走这支——维持原来标定过的算法（±3%），一个字不变 */
+  var allOk=(misses===0 && s.count>0);
   var pts=pointsOf(s);
+  if(allOk){
+    var cpts=[];
+    for(var t0=0;t0<pts.length;t0++){
+      var p0=pts[t0];
+      cpts.push({i:p0.i, n:p0.n, k:p0.k, p:wilson(p0.k,p0.n,1.28)[0], se:p0.se});
+    }
+    pts=cpts;
+  }
   var map={};
   for(var t=0;t<pts.length;t++) map[pts[t].i]=pts[t];
   var allow=outerAllowance(pts);   // 实测范围之上的上限补偿，只进区间上沿
@@ -687,8 +721,8 @@ function computeResult(s){
     var size=LEVELS[m-1].size;
     var pt=map[m];
     var n=pt?pt.n:0, k=pt?pt.k:0;
-    /* 测过的段 → 实测比例；范围内的空段 → 两边夹小的那个；范围之上 → 0 */
-    var pc=pt?clamp((k/n-guess)/(1-guess),0,1):innerRate(m, pts);
+    /* 测过的段 → 实测比例（全对轮按置信下限）；范围内的空段 → 两边夹小的那个；范围之上 → 0 */
+    var pc=pt?(allOk?pt.p:clamp((k/n-guess)/(1-guess),0,1)):innerRate(m, pts);
     est+=pc*size;
     levels.push({i:m, size:size, stars:LEVELS[m-1].stars, name:LEVELS[m-1].name, color:LEVELS[m-1].color,
                  asked:n, correct:k, p:n?k/n:0, pc:pc});
@@ -707,27 +741,24 @@ function computeResult(s){
   // 至少给一点宽度，别让区间看起来像精确值
   if(hi10<est10+80) hi10=est10+80;
   if(lo10>est10-80) lo10=Math.max(0,est10-80);
-  var wrong=[], misses=0;
-  s.answers.forEach(function(a){
-    if(!a.correct){ misses++; if(wrong.indexOf(a.ch)<0) wrong.push(a.ch); }
-  });
   /* 一道都没答错 → 说明一路过关斩将爬到了顶端。但"本轮全对"不等于"爬到顶"：
      一轮只出 10 题左右，题量一到就停了，这时候上面那几关根本还没测过，
      不能说成"至少 5000"。所以必须真的测到最高关、且最高关也全对，才算测到顶。 */
   var topLv=LEVELS.length, topAsked=s.asked[topLv]||0;
   var topAced=(topAsked>0 && (s.correct[topLv]||0)>=topAsked);
   var topOut=(misses===0 && s.count>0 && topAced);
-  /* 样本够不够：累计测满 MIN_TESTED 个字才给分数。
-     真的一路全对闯到最高关（topAced）是例外——那时候证据已经足够决定性，
-     再让他多答几道也不会改变结论，没必要卡着不给。 */
+  /* 样本够不够：累计测满 MIN_TESTED 个字才给分数，一视同仁。
+     以前"全对闯到最高关"是例外——后来发现不对：12 题全对靠跳两关就能摸到
+     第 10 关，每关才 2 题，这时候报"至少 5000"证据太薄了（2026-10 家长实测
+     反馈的正是这个）。全对的孩子更该多答几道把证据坐实，答完照样是"至少"。 */
   var testedN=testedTotal(s);
-  var enough=(testedN>=MIN_TESTED)||topAced;
+  var enough=(testedN>=MIN_TESTED);
   return {
     est:est10, lo:Math.min(lo10,est10), hi:Math.min(5000,Math.max(hi10,est10)),
     starLevel:starLevel, levels:levels, wrong:wrong,
     count:s.count, askedTotal:s.count, correctTotal:s.stars,
     stopReason:s.stopReason, mode:s.mode, sentCount:s.sentCount||0,
-    distinct:s.count, misses:misses, topOut:topOut,
+    distinct:s.count, misses:misses, topOut:topOut, allOk:allOk,
     /* 跨轮累积的口径：这一轮做了多少、之前累计了多少、这是第几轮 */
     sessCount:s.count, priorN:s.priorN||0, totalN:s.count+(s.priorN||0),
     rounds:(s.priorRounds||0)+1, topTested:topAced,
