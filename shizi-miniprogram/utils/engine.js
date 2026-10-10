@@ -416,7 +416,7 @@ function priorCount(p){
 /* 一轮结束：把"合起来的总证据"折价成下一轮的先验。
    rounds 记的是"这份证据一共攒了几轮"、tested 记的是"累计测过多少个字"，
    两个都只用来给家长看和判"样本够不够"，不参与识字量计算 */
-function priorTrim(asked, correct, rounds, tested, lbFloor){
+function priorTrim(asked, correct, rounds, tested, lbFloor, anchor){
   asked=asked||{}; correct=correct||{};
   var A={}, C={};
   for(var i=1;i<=LEVELS.length;i++){
@@ -428,16 +428,17 @@ function priorTrim(asked, correct, rounds, tested, lbFloor){
     C[i]=Math.round(n0?((correct[i]||0)/n0)*n:0);
   }
   return {asked:A, correct:C, rounds:Math.max(1,rounds||1), tested:Math.max(0,tested||0),
-          lbFloor:Math.max(0,lbFloor||0)};
+          lbFloor:Math.max(0,lbFloor||0), anchor:Math.max(1,anchor||1)};
 }
 /* 一轮结束时的收尾动作：先并（先验 + 本轮）、再折价，并把累计字数带上。
    lbFloor 是「至少」棘轮：全对轮证明过的下限存进先验，之后任何一轮的
    显示都不低于它（下限一旦被证据证明就一直成立，不会"玩着玩着变少"）。
    调用方一句 store.setPrior(mode, E.priorNext(s, floor)) 就够。 */
-function priorNext(s, lbFloor){
+function priorNext(s, lbFloor, anchor){
   if(lbFloor===undefined) lbFloor=(s.prior&&s.prior.lbFloor)||0;
+  if(anchor===undefined) anchor=(s.prior&&s.prior.anchor)||1;
   var mc=priorMerge(s);
-  return priorTrim(mc.asked, mc.correct, (s.priorRounds||0)+1, testedTotal(s), lbFloor);
+  return priorTrim(mc.asked, mc.correct, (s.priorRounds||0)+1, testedTotal(s), lbFloor, anchor);
 }
 /* 先验 + 本轮实测 = 这一轮拿来估算的全部证据 */
 function priorMerge(s){
@@ -464,9 +465,11 @@ function newSession(opt){
   var s={
     name:opt.name||'跳跳', age:opt.age||5, mode:mode,
     pools:pools, asked:{}, correct:{}, answers:[],
-    phase:'warmup', warmupLeft:WARM_N,
-    curLevel:2, blockAsked:0, blockCorrect:0, lastDir:1, reversals:0, floorFails:0,
-    boundary:0, topupCount:0,
+    phase:'flow',
+    /* 锚定出题（2026-10-10 晚定）：每轮主要测"锚"这一级（从第 1 级起），
+       每 4 题穿插 1 题高两级的抽查、1 题低一级的回顾；锚每轮最多升 1 级、
+       表现差退 1 级——就算抽查全对也不往上跳，家长要的是"先低级、偶尔穿插" */
+    anchor:1,
     q:null, done:false, stars:0, count:0, stopReason:'', shownLevel:0,
     earned:0, pandaShown:0
   };
@@ -480,17 +483,9 @@ function newSession(opt){
        前几题都是最简单的字，孩子先有成就感；
      · 第二轮：从上一轮分界下面两关起，还是偏简单；
      · 第三轮起：分界下面一关起，证据直接落在分界附近 */
-  if(s.priorBoundary>0){
-    var back=(s.priorRounds>=2)?1:2;
-    s.startLevel=clamp(s.priorBoundary-back,2,LEVELS.length);
-  }else{
-    s.startLevel=1;
-  }
-  /* 关卡解锁节奏（2026-10-10 家长反馈"第二轮就出现八九级"）：
-     每轮最多比上一轮往上探两级——第1轮≤4级、第2轮≤6、第3轮≤8、第4轮起≤10。
-     全对的孩子也不能一步登天，慢慢往上开 */
-  s.lvCap=Math.min(LEVELS.length, 2+2*((s.priorRounds||0)+1));
-  if(s.startLevel>s.lvCap-2) s.startLevel=Math.max(1,s.lvCap-2);
+  /* 锚定等级接着上一轮：上一轮表现好 +1、吃力 -1（见 anchorAfter），最多每轮升一级 */
+  s.anchor=(opt.prior&&opt.prior.anchor)||1;
+  s.startLevel=s.anchor;   /* 兼容页面/测试里显示起测关 */
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
@@ -629,17 +624,12 @@ function stairDecide(s){
    ========================================================================= */
 
 function sentTarget(s){
-  /* 起测台阶：没有历史就从第 2 档开始；有历史就直接从"上次分界下面两级"起步，
-     省掉前面那几句浅句子（句子一句能覆盖十来个字，站得高一点不亏） */
-  var base=(s.priorBoundary>0)?clamp(s.priorBoundary-2,1,LEVELS.length):2;
-  if(s.sentCount<SENT_WARM) return base;
-  var b=findBoundary(s);                          // 分界（第一个不过关的等级）
-  /* 一句都没标过"不认识" → 台阶每句升一级（句子题库的字集中在低段，爬得慢的话
-     高分段全靠运气覆盖，全对时数字给不高也说不清）；有标过就维持每两句升一级 */
-  var marked=0, k;
-  for(k in s.asked){ if(Object.prototype.hasOwnProperty.call(s.asked,k)) marked+=(s.asked[k]||0)-((s.correct&&s.correct[k])||0); }
-  var step=base+Math.floor(s.sentCount/(marked===0?1:2));
-  return clamp(Math.min(b,step),1,Math.min(LEVELS.length,s.lvCap||LEVELS.length));
+  /* 锚定选句：主要读"锚"这一级的句子，每 3 句穿插 1 句高一级的抽查。
+     和单字玩法同一个节奏——先低级、偶尔穿插，认识高级也不往上跳 */
+  var a=(s.anchor||1);
+  if(s.sentCount<SENT_WARM) return Math.max(1,a-1);
+  if(s.sentCount%3===2) return Math.min(a+1, LEVELS.length);
+  return a;
 }
 
 function pickSentence(s){
@@ -717,31 +707,25 @@ function nextQuestion(s){
   if(s.mode==='sentence') return nextSentence(s);
   if(s.count>=(s.cap||MAX_Q)){ s.stopReason='limit'; s.done=true; return null; }
 
-  if(s.phase==='warmup'){
-    s.q=makeQuestion(s,1);
-    return s.q;
-  }
-  if(s.phase==='stair'){
-    if(s.blockAsked>=BLOCK) stairDecide(s);
-    if(s.done) return null;
-    if(s.phase==='stair'){
-      if(!s.asked[s.curLevel]){ s.asked[s.curLevel]=0; s.correct[s.curLevel]=0; }
-      s.q=makeQuestion(s,s.curLevel);
-      return s.q;
-    }
-  }
-  if(s.phase==='topup'){
-    if(s.topupCount>=(s.topupBudget||TOP_MAX)){ s.stopReason='stable'; s.done=true; return null; }
-    s.boundary=findBoundary(s);
-    var need=topupNext(s);
-    if(!need){ s.stopReason='stable'; s.done=true; return null; }
-    s.topupCount++;
-    if(!s.asked[need]){ s.asked[need]=0; s.correct[need]=0; }
-    s.q=makeQuestion(s,need);
-    return s.q;
-  }
-  s.done=true;
-  return null;
+  /* 锚定出题：主测锚这一级；每 4 题穿插 1 题高两级（抽查）、1 题低一级（回顾）。
+     抽查对了也不升级——升级只发生在轮与轮之间（anchorAfter，每轮最多 +1） */
+  var i=s.count, a=s.anchor||1, lv=a;
+  if(i%4===3) lv=Math.min(a+2, LEVELS.length);
+  else if(i%4===2 && a>1) lv=a-1;
+  if(!s.asked[lv]){ s.asked[lv]=0; s.correct[lv]=0; }
+  s.q=makeQuestion(s,lv);
+  return s.q;
+}
+
+/* 轮与轮之间的锚定调整：锚这一级表现好（≥70%）→ 下轮 +1（最多）；
+   明显吃力（<30%）→ 退 1 级；抽查题不影响升降——认识高级也不跳 */
+function anchorAfter(s){
+  var a=s.anchor||1;
+  var n=(s.asked&&s.asked[a])||0, k=(s.correct&&s.correct[a])||0;
+  var rate=(n>=2)?(k/n):((s.count>=5)?(s.stars/s.count):1);
+  if(rate>=0.7) return Math.min(LEVELS.length, a+1);
+  if(rate<0.3) return Math.max(1, a-1);
+  return a;
 }
 
 function answerQuestion(s,correct){
@@ -752,13 +736,6 @@ function answerQuestion(s,correct){
   s.asked[lv]=(s.asked[lv]||0)+1;
   if(correct){ s.correct[lv]=(s.correct[lv]||0)+1; s.stars++; }
 
-  if(s.phase==='warmup'){
-    s.warmupLeft--;
-    if(s.warmupLeft<=0){ s.phase='stair'; s.curLevel=s.startLevel||2; s.blockAsked=0; s.blockCorrect=0; }
-  }else if(s.phase==='stair'){
-    s.blockAsked++;
-    if(correct) s.blockCorrect++;
-  }
   s.q=null;
   return {level:lv, correct:!!correct, ch:q.ch};
 }
@@ -1121,4 +1098,4 @@ function levelFromKnown(n){
 }
 
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress, levelFromKnown };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress, levelFromKnown, anchorAfter };

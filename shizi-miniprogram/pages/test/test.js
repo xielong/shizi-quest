@@ -294,7 +294,8 @@ Page({
 
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
-    store.setPrior(s.mode, E.priorNext(s, floor));
+    /* 锚定等级写回先验：本轮锚级表现好 → 下轮锚 +1（最多），吃力 → -1 */
+    store.setPrior(s.mode, E.priorNext(s, floor, E.anchorAfter(s)));
 
     /* 豆豆成长值 = 累计认识的字数（2026-10-10 统一账本；max 只增不减，
        孩子忘掉一个字豆豆也不会缩回去） */
