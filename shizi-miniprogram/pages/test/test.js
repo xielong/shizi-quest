@@ -246,33 +246,11 @@ Page({
   },
 
   /* ---------- 这一轮的额度用完了 ----------
-     样本够（累计测满 MIN_TESTED 个字）就正常结算；
-     不够就直说"还需要再多答几道题"，家长同意就接着这轮继续出题
-     （不重开一轮：先验不动，做完一起结算；也最多接三次，别把孩子困住） */
+     一轮固定 10 个字；累计不满 20 个字（MIN_TESTED）就不出分数，
+     由结果页说明"同一玩法再答一轮就够"——不再一轮内弹窗续答
+     （2026-10-10 家长定的节奏：每轮都 10 个字，跨轮累积补样本） */
   wrapUp: function () {
-    var s = this.s, that = this;
-    if (!s) return;
-    var r = E.computeResult(s);
-    this._askMore = this._askMore || 0;
-    if (r.enough || this._askMore >= 3) { this.finish(); return; }
-    this._askMore++;
-    /* 就差临门一脚（1~2 个字）：别为这点事弹窗打扰家长，直接接着出题 */
-    if (r.needN <= 2) { E.extendSession(s, r.needN); this.step(); return; }
-    wx.showModal({
-      title: '还差 ' + r.needN + ' 个字才给分数',
-      content: '已经测了 ' + r.testedN + ' 个字，至少要 ' + r.minTested + ' 个才算数——'
-             + '题太少的话，算出来的数字没有意义。再答几道就够了，继续吗？',
-      confirmText: '继续答',
-      cancelText: '先到这儿',
-      success: function (res) {
-        if (res.confirm && that.s) {
-          E.extendSession(that.s, r.needN);
-          that.step();
-        } else {
-          that.finish();
-        }
-      }
-    });
+    this.finish();
   },
 
   /* ---------- 结算 ---------- */
@@ -340,16 +318,17 @@ Page({
       return;
     }
     /* 测得太少就不给分数，所以这时候别问"要不要出结果"，
-       直接告诉家长"还要再多答几道"（不拦着他退出，只是说明清楚） */
+       直接告诉家长"再玩一轮就够"（不拦着他退出，只是说明清楚） */
     var tested = E.testedTotal(s), enough = tested >= E.MIN_TESTED;
     wx.showModal({
-      title: enough ? '退出测试' : '还要再多答几道题',
+      title: enough ? '退出测试' : '还差一些字才给分数',
       content: enough
         ? ('已经测的 ' + s.count + ' 个字会算出结果，确定退出吗？')
-        : ('一共才测了 ' + tested + ' 个字，至少测满 ' + E.MIN_TESTED + ' 个才给分数，'
-           + '还差 ' + (E.MIN_TESTED - tested) + ' 个。现在退出不会有分数，要不要再答几道？'),
+        : ('一共才测了 ' + tested + ' 个字，至少累计测满 ' + E.MIN_TESTED + ' 个才给分数，'
+           + '还差 ' + (E.MIN_TESTED - tested) + ' 个。现在退出这一次不会有分数；'
+           + '同一玩法再玩一轮、累计够了就出分。'),
       confirmText: enough ? '出结果' : '还是要退出',
-      cancelText: enough ? '继续测' : '再答几道',
+      cancelText: '继续测',
       success: function (res) { if (res.confirm) that.finish(); }
     });
   },

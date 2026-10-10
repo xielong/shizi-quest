@@ -84,5 +84,5 @@
     </view>
   </view>
 
-  <view class="muted center foot-note">读一读 / 找一找 一轮十来题（没测够 20 个字会问你要不要接着答）· 读句子 最多 7 句 · 至少测满 20 个字才给分数 · 随时可以停</view>
+  <view class="muted center foot-note">读一读 / 找一找 一轮 10 题 · 读句子 最多 7 句 · 累计测满 20 个字才给分数 · 随时可以停</view>
 </view>

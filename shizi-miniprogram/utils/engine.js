@@ -161,7 +161,9 @@ var SENTENCES=SENTENCE_TEXT.map(function(t,idx){
 
 var WARM_N=2, BLOCK=2, PASS_NEED=1;
 
-var TOPN=3, TOP_ABOVE=2, TOP_MAX=4, MAX_Q=12;
+var TOPN=3, TOP_ABOVE=2, TOP_MAX=4, MAX_Q=10;
+/* 一轮固定 10 题（2026-10-10 家长定的）。累计不满 MIN_TESTED=20 个字就先不出分数，
+   第二轮累加起来自然够——不再一轮内弹窗续答 */
 /* 折返夹住分界后，最少攒到这么多题才转复核（原来 13） */
 var STAIR_MIN_Q=7;
 /* 折返几次就算"分界夹住"了。跨轮累积以后，一轮夹住一次就够——
