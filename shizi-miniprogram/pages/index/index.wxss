@@ -74,3 +74,12 @@
 .md { margin-top: 8rpx; font-size: 23rpx; color: #71809e; line-height: 1.6; }
 
 .foot-note { margin-top: 24rpx; }
+
+/* ---------- 名字 + 年龄 同一行 ---------- */
+.formrow { gap: 16rpx; align-items: stretch; }
+.col-name { flex: 2; min-width: 0; }
+.col-age { flex: 1; min-width: 0; }
+/* picker 组件和输入框都要显式撑满列宽，否则会被 flex 挤没 */
+.formrow .inp,
+.formrow picker,
+.formrow picker .inp { width: 100%; box-sizing: border-box; display: block; }
