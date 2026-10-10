@@ -240,8 +240,10 @@ Page({
     var name = ((this._name !== undefined ? this._name : this.data.name) || '').trim();
     this._name = undefined;
     if (!name) { this.setData({ name: store.curPlayer().name }); return; }
-    var saved = store.updatePlayer(store.curId(), { name: name, age: AGES[this.data.ageIdx] || 5 });
-    if (saved) this.setData({ curName: saved.name, name: saved.name });
+    store.updatePlayer(store.curId(), { name: name, age: AGES[this.data.ageIdx] || 5 });
+    /* 改名字/年龄后把「谁在玩」芯片也刷掉——以前只有换人才刷新，
+       家长改完年龄看着芯片还是旧的，以为没生效 */
+    this.loadPlayers();
     app.reloadProfile();
   },
   pickMode: function (e) { this.setData({ mode: e.currentTarget.dataset.mode }); },
