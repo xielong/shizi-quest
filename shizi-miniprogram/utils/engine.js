@@ -876,15 +876,13 @@ function modeName(m){
   return m==='read' ? '读一读' : (m==='sentence' ? '读句子' : '找一找');
 }
 
+/* 进度条 = 答题完成度（已做 ÷ 这一轮的上限）。
+   以前画的是"难度进程"（爬到第几关、复核到第几题）：难度回落时条会往回缩，
+   起测关高时条一开始就很长——家长看着就是"答得多条反而短"（2026-10-10 真机反馈）。
+   现在的阶段信息（正在挑战/回头复核）文字行里本来就有，条只管进度 */
 function levelProgress(s){
-  if(s.mode==='sentence') return clamp(s.sentCount/SENT_MAX,0.02,0.97);
-  if(s.phase==='warmup') return clamp(s.count/WARM_N*0.07,0.01,0.07);
-  if(s.phase==='stair'){
-    var base=0.07+(s.curLevel-1)/LEVELS.length*0.60;
-    var within=((s.blockAsked||0)%BLOCK)/BLOCK*(0.60/LEVELS.length);
-    return clamp(base+within,0.07,0.70);
-  }
-  return clamp(0.72+(s.topupCount||0)/TOP_MAX*0.26,0.72,0.97);
+  if(s.mode==='sentence') return clamp(s.sentCount/(s.sentCap||SENT_MAX),0.02,0.97);
+  return clamp(s.count/(s.cap||MAX_Q),0.02,0.97);
 }
 
 /* ---- 导出 ---- */
