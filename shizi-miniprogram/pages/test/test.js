@@ -25,6 +25,10 @@ Page({
     this.locked = false;
     this._facing = 'front';
     s.pandaShown = E.pandaUnlocked(store.pandaTotal()).length;
+    /* 字库快照：本轮里"新认识的字"才算豆豆成长（账本＝累计认识字数，1:1） */
+    var inv0 = store.getChars();
+    this._knownSet = inv0.known;
+    this._knownBase = Object.keys(inv0.known).length;
 
     var isSent = s.mode === 'sentence';
     this.setData({
@@ -117,6 +121,7 @@ Page({
     if (this.locked || !this.s || !this.s.q) return;
     this.locked = true;
     var s = this.s;
+    var ch = s.q.ch;   /* 先取字，answerQuestion 之后 s.q 就清了 */
 
     /* 选项上色：对的亮绿，点错的亮红 */
     if (this.data.q && this.data.q.options) {
@@ -136,7 +141,8 @@ Page({
     if (ok) {
       patch.fbCls = 'ok';
       patch.fbText = E.CHEER[Math.floor(Math.random() * E.CHEER.length)];
-      s.earned = (s.earned || 0) + 1;
+      /* 豆豆只对新认识的字长大（已认识的再答对不重复记） */
+      if (ch && !this._knownSet[ch]) { this._knownSet[ch] = 1; s.earned = (s.earned || 0) + 1; }
       this.refreshMini();
     } else {
       patch.fbCls = 'no';
@@ -185,14 +191,19 @@ Page({
     if (this.locked || !this.s) return;
     this.locked = true;
     var s = this.s;
+    /* 先数这句里"没标红且之前不认识"的新字（submitSentence 之后句子就清了） */
+    var sen = s.curSentence;
+    if (sen) {
+      for (var ci = 0; ci < sen.uniq.length; ci++) {
+        var cc = sen.uniq[ci];
+        if (!s.marks[cc] && !this._knownSet[cc]) { this._knownSet[cc] = 1; s.earned = (s.earned || 0) + 1; }
+      }
+    }
     var info = E.submitSentence(s, s.marks);
     var patch = { qText: '测到 ' + s.count + ' 个字', stars: s.stars };
 
-    /* 这一句认出来的字，也算进豆豆的成长 */
-    if (info && info.known > 0) {
-      s.earned = (s.earned || 0) + info.known;
-      this.refreshMini();
-    }
+    /* 新认识的字当场让豆豆长大（上面已经数好） */
+    if (s.earned > 0) this.refreshMini();
     var marked = info ? info.marked : 0;
     patch.fbCls = 'ok';
     patch.fbText = marked === 0
@@ -211,9 +222,8 @@ Page({
   refreshMini: function (quiet) {
     var s = this.s;
     if (!s) return;
-    /* ×EARN_RATE：跟结算口径对齐（finish 里 pandaEarn 也是乘 2 的），
-       这样"当场长出来"的零件和最终落账的完全一致 */
-    var live = store.pandaTotal() + (s.earned || 0) * E.EARN_RATE;
+    /* 账本＝累计认识字数：本轮新增当场长，最终按字库结算（max 只增不减） */
+    var live = Math.max(store.pandaTotal(), this._knownBase + (s.earned || 0));
     var patch = { mini: P.layers(live, this._facing) };
     /* 跨进冬天：测试页当场下雪 */
     if (E.sceneCur(live).id === 'winter' && !this.data.testSnow.length) {
@@ -242,7 +252,7 @@ Page({
   turnMini: function () {
     if (!this.s) return;
     this._facing = this._facing === 'back' ? 'front' : 'back';
-    this.setData({ mini: P.layers(store.pandaTotal() + (this.s.earned || 0) * E.EARN_RATE, this._facing) });
+    this.setData({ mini: P.layers(Math.max(store.pandaTotal(), this._knownBase + (this.s.earned || 0)), this._facing) });
   },
 
   /* ---------- 这一轮的额度用完了 ----------
@@ -286,11 +296,10 @@ Page({
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
     store.setPrior(s.mode, E.priorNext(s, floor));
 
-    /* 这次认对的字记到豆豆账上（一场题少，每个字按 EARN_RATE 点算，长大节奏跟以前持平）
-       注意：样本不够、不出分数的时候，豆豆照样长大——孩子认真答了就该有奖励 */
-    var pe = E.pandaEarn(store.pandaTotal(), (s.earned || 0) * E.EARN_RATE);
+    /* 豆豆成长值 = 累计认识的字数（2026-10-10 统一账本；max 只增不减，
+       孩子忘掉一个字豆豆也不会缩回去） */
+    var pe = E.pandaEarn(store.pandaTotal(), Math.max(0, r.knownTotal - store.pandaTotal()));
     store.pandaSetTotal(pe.after);
-    s.earned = 0;
 
     /* 搬家检查 */
     var freshScenes = [];

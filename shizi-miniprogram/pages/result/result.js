@@ -49,7 +49,7 @@ Page(Object.assign({
     var pandaText = freshNames.length
       ? ('这次新长出了 ' + freshNames.join('、') + '！豆豆现在一共有 ' + pun.length + ' 个零件。')
       : (pnext
-        ? ('这次没有长出新零件。再答对 ' + Math.ceil((pnext.at - total) / E.EARN_RATE) + ' 个字，豆豆就能长出「' + pnext.name + '」了。')
+        ? ('这次没有长出新零件。再认识 ' + (pnext.at - total) + ' 个新字，豆豆就能长出「' + pnext.name + '」了。')
         : '豆豆的零件已经全部长齐啦，真厉害！');
 
     var cur = E.sceneCur(total), scNext = E.sceneNext(total);
@@ -58,7 +58,7 @@ Page(Object.assign({
     var worldNote = freshScNames.length
       ? ('豆豆这次搬去了 ' + freshScNames.join('、') + '！')
       : (scNext
-        ? ('豆豆现在住在 ' + cur.name + '，再答对 ' + Math.ceil((scNext.at - total) / E.EARN_RATE) + ' 个字就搬去「' + scNext.name + '」')
+        ? ('豆豆现在住在 ' + cur.name + '，再认识 ' + (scNext.at - total) + ' 个新字就搬去「' + scNext.name + '」')
         : '豆豆把四个季节都住遍啦，真了不起！');
 
     /* ---- 条形图（各难度段的实测认识率，决定下一轮从哪测） ---- */
