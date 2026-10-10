@@ -124,7 +124,6 @@
     </view>
     <view class="row" style="margin-top:18rpx;gap:18rpx">
       <button class="btn mini" style="flex:1" bindtap="makeCard">{{enough?'生成成绩卡图片':'—'}}</button>
-      <button class="btn mini" style="flex:1" bindtap="copyResult">{{copied?'已复制 ✓':(enough?'复制成文字':'复制这次的情况')}}</button>
       <button class="btn mini" style="flex:1" bindtap="goHistory">成长记录</button>
     </view>
     <view class="muted center" style="margin-top:18rpx">{{enough?'成绩卡可以保存到相册或发给家人。':'答完接着测，数字出来就能生成成绩卡啦。'}}</view>

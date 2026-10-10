@@ -20,7 +20,6 @@ Page(Object.assign({
     refRows: [],
     wrong: [],
     certMeta: '',
-    copied: false,
     facing: 'front'
   },
 
@@ -201,34 +200,6 @@ Page(Object.assign({
       title: '这个字念什么？',
       content: ch + ' —— 请家长带着小朋友多念几遍，下次见到就是老朋友啦。',
       showCancel: false, confirmText: '记住啦'
-    });
-  },
-
-  copyResult: function () {
-    var r = this.data.r, profile = app.profile();
-    var isSent = r.mode === 'sentence';
-    var lowB = !!(r.topOut || r.floored || r.allOk || (r.misses === 0 && r.count > 0));   // 没摸到分界/棘轮保底 = 下限口径
-    var howMany = isSent
-      ? ('共读 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字')
-      : ('共 ' + r.count + ' 题');
-    var txt;
-    if (!r.enough) {
-      /* 样本不够：不报数字，只说"还需要再多答几道题" */
-      txt = profile.name + '（' + profile.age + '岁）识字小测：这次一共测了 ' + r.testedN + ' 个字，'
-        + '题目太少（至少 ' + r.minTested + ' 个才出分数），先不给成绩，还要再多答 ' + r.needN + ' 个。'
-        + '玩法：' + E.modeName(r.mode) + '，' + howMany + '。' + E.todayStr();
-    } else {
-      txt = profile.name + '（' + profile.age + '岁）识字量测试结果：' + (lowB ? '至少 ' : '约 ') + r.est + ' 字（合理区间 ' + r.lo + '~' + r.hi + '），'
-        + '玩法：' + E.modeName(r.mode) + '，' + howMany
-        + (r.priorN > 0 ? ('（第 ' + r.rounds + ' 轮，把前面几轮攒的 ' + r.priorN + ' 题也一起算了）') : '')
-        + '，通过 ' + r.starLevel + ' 星难度。'
-        + (r.topOut ? '（全部答对，测到字表上限）' : (lowB ? '（一道都没答错，还没测到他的边界，这是下限）' : ''))
-        + E.todayStr();
-    }
-    var that = this;
-    wx.setClipboardData({
-      data: txt,
-      success: function () { that.setData({ copied: true }); }
     });
   },
 
