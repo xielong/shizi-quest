@@ -69,3 +69,12 @@
 .cert .n { font-size: 56rpx; font-weight: 900; color: #2b3a55; margin-top: 16rpx; }
 .cert .d { font-size: 26rpx; color: #a5854a; margin-top: 10rpx; }
 .cert-tip { margin-top: 20rpx; font-size: 24rpx; color: #c98a12; font-weight: 800; }
+
+/* 生成分享图用的离屏画布（移出屏幕，不占版面） */
+.share-canvas {
+  position: fixed;
+  left: 9999rpx;
+  top: 0;
+  width: 600px;
+  height: 800px;
+}

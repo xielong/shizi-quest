@@ -5,8 +5,9 @@ var E = require('../../utils/engine.js');
 var store = require('../../utils/store.js');
 var P = require('../../utils/panda.js');
 var app = getApp();
+var Card = require('./result_card.js');
 
-Page({
+Page(Object.assign({
   data: {
     name: '', shownEst: 0, heroTitle: '',
     r: null, starStars: [], levelText: '',
@@ -244,4 +245,4 @@ Page({
 
   goHome: function () { wx.reLaunch({ url: '/pages/index/index' }); },
   goHistory: function () { wx.navigateTo({ url: '/pages/history/history' }); }
-});
+}, Card));

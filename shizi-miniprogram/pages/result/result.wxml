@@ -123,9 +123,13 @@
       <button class="btn ghost" style="flex:1" bindtap="goHome">回首页</button>
     </view>
     <view class="row" style="margin-top:18rpx;gap:18rpx">
-      <button class="btn mini" style="flex:1" bindtap="copyResult">{{copied?'已复制 ✓':(enough?'复制成绩发给家人':'复制这次的情况')}}</button>
-      <button class="btn mini" style="flex:1" bindtap="goHistory">看成长记录</button>
+      <button class="btn mini" style="flex:1" bindtap="makeCard">{{enough?'生成成绩卡图片':'—'}}</button>
+      <button class="btn mini" style="flex:1" bindtap="copyResult">{{copied?'已复制 ✓':(enough?'复制成文字':'复制这次的情况')}}</button>
+      <button class="btn mini" style="flex:1" bindtap="goHistory">成长记录</button>
     </view>
-    <view class="muted center" style="margin-top:18rpx">{{enough?'想留个纪念？截屏这个页面就是一张奖状。':'答完接着测，数字出来就能发奖状啦。'}}</view>
+    <view class="muted center" style="margin-top:18rpx">{{enough?'成绩卡可以保存到相册或发给家人。':'答完接着测，数字出来就能生成成绩卡啦。'}}</view>
   </view>
+
+  <!-- 生成分享图用的离屏画布 -->
+  <canvas type="2d" id="shareCanvas" class="share-canvas"></canvas>
 </view>
