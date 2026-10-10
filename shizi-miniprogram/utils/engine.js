@@ -709,13 +709,18 @@ function computeResult(s){
   s.answers.forEach(function(a){
     if(!a.correct){ misses++; if(wrong.indexOf(a.ch)<0) wrong.push(a.ch); }
   });
-  /* 一道没错（allOk）→ 还没摸到"认不出"的那条线，数字只能按下限口径给：
+  /* 没摸到"认不出的那条线"（allOk）→ 数字只能按下限口径给：
      每个已测段按 Wilson 一侧80%置信下限折算（测2题的段只按约55%、5题约79%），
      没出题的空档段按两边下限里小的补。这跟自适应测试（CAT）的惯例一致：
      能力超出题库范围时不给点估计，只报"至少 X"。
-     有答错的孩子不走这支——维持原来标定过的算法（±3%），一个字不变 */
-  var allOk=(misses===0 && s.count>0);
+     判据是"分界露出来没有"（没有任何一段的合并认识率低于 50%），不是"一道没错"——
+     2026-10-10 家长实测：只错一道（哪怕错在热身的一星字）就整场退回原始比例，
+     2题/段照样按100%折，20个字能报到4000+。分界一露（正常孩子）就走
+     原来标定过的算法（±3%），一个字不变 */
   var pts=pointsOf(s);
+  var noBnd=(pts.length>0);
+  for(var t0=0;t0<pts.length;t0++){ if(pts[t0].p<0.5){ noBnd=false; break; } }
+  var allOk=(misses===0 && s.count>0) || noBnd;
   if(allOk){
     var cpts=[];
     for(var t0=0;t0<pts.length;t0++){
@@ -748,6 +753,12 @@ function computeResult(s){
   var starLevel=0;
   for(var q2=0;q2<levels.length;q2++){ if(levels[q2].asked>0 && levels[q2].pc>=0.5) starLevel=levels[q2].i; }
   var est10=Math.round(est/10)*10;
+  /* 护栏（2026-10-10 家长定的规矩：答题轮数少，预估的字数就不能多）：
+     数字上限 = 累计已测字数 × 100。两轮读一读共 20 字 → 最多报 2000；
+     读句子一轮 50 字 → 上限 5000（等于不卡）。多玩几轮上限自动放开，
+     方向宁少不多，和「至少」口径一致 */
+  var estCap=Math.min(5000, testedTotal(s)*100);
+  if(est10>estCap) est10=Math.floor(estCap/10)*10;
   var lo10=Math.round(lo/10)*10, hi10=Math.round(hi/10)*10;
   // 至少给一点宽度，别让区间看起来像精确值
   if(hi10<est10+80) hi10=est10+80;
