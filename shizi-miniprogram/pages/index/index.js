@@ -227,18 +227,21 @@ Page({
     }, 180);
   },
 
-  /* ---- 表单（改的就是当前小朋友） ---- */
-  onName: function (e) { this.setData({ name: e.detail.value }); },
+  /* ---- 表单（改的就是当前小朋友） ----
+     名字输入不回写 data（只在失焦保存时回写）：中文输入法打字打到一半时
+     setData 回显会打断组词、光标乱跳，表现就是"改不了名字" */
+  onName: function (e) { this._name = e.detail.value; },
   onAge: function (e) {
     var idx = Number(e.detail.value);
     this.setData({ ageIdx: idx });
     this.saveForm();
   },
   saveForm: function () {
-    var name = (this.data.name || '').trim();
+    var name = ((this._name !== undefined ? this._name : this.data.name) || '').trim();
+    this._name = undefined;
     if (!name) { this.setData({ name: store.curPlayer().name }); return; }
     var saved = store.updatePlayer(store.curId(), { name: name, age: AGES[this.data.ageIdx] || 5 });
-    if (saved) this.setData({ curName: saved.name });
+    if (saved) this.setData({ curName: saved.name, name: saved.name });
     app.reloadProfile();
   },
   pickMode: function (e) { this.setData({ mode: e.currentTarget.dataset.mode }); },

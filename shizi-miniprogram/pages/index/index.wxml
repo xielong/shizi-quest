@@ -51,14 +51,18 @@
   <!-- 名字 / 年龄 / 玩法 -->
   <view class="card">
     <view class="field">
-      <view class="label">小朋友的名字</view>
-      <input class="inp" value="{{name}}" maxlength="8" placeholder="写个小名就好" bindinput="onName" bindblur="saveForm" />
-    </view>
-    <view class="field">
-      <view class="label">几岁啦</view>
-      <picker mode="selector" range="{{ages}}" value="{{ageIdx}}" bindchange="onAge">
-        <view class="inp">{{ages[ageIdx]}} ▾</view>
-      </picker>
+      <view class="row" style="gap:16rpx;align-items:stretch">
+        <view style="flex:2">
+          <view class="label">小朋友的名字</view>
+          <input class="inp" value="{{name}}" maxlength="8" placeholder="写个小名就好" bindinput="onName" bindblur="saveForm" />
+        </view>
+        <view style="flex:1">
+          <view class="label">几岁啦</view>
+          <picker mode="selector" range="{{ages}}" value="{{ageIdx}}" bindchange="onAge">
+            <view class="inp">{{ages[ageIdx]}} ▾</view>
+          </picker>
+        </view>
+      </view>
     </view>
     <view class="field">
       <view class="label">选一个玩法</view>
