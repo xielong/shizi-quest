@@ -1,5 +1,9 @@
 /* ---------- 测试页 ---------- */
-.topbar { display: flex; align-items: center; gap: 14rpx; }
+.topbar { display: flex; align-items: center; gap: 18rpx; }
+/* 退出按钮被 app.wxss 的 button.btn{width:100%} 撑满 → flex 行里 spacer 被挤没了，
+   三个元素全贴在左边（2026-10-10 真机截图反馈"左上角太拥挤"）。
+   这里恢复自适应宽度，再用 margin-left:auto 兜底：退出永远靠右 */
+.topbar .btn.mini { width: auto; margin-left: auto; }
 .tchip {
   background: #fff; border-radius: 999rpx; padding: 10rpx 24rpx;
   font-size: 26rpx; font-weight: 800; color: #2b3a55;
