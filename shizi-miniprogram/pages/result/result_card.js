@@ -118,13 +118,13 @@ module.exports = {
 
     /* 星级 */
     var starTxt = '';
-    for (var i = 1; i <= 10; i++) starTxt += i <= r.starLevel ? '★' : '☆';
+    for (var i = 1; i <= E.LEVELS.length; i++) starTxt += i <= r.starLevel ? '★' : '☆';
     ctx.font = '30px sans-serif';
     ctx.fillStyle = '#e8a900';
     ctx.fillText(starTxt, W / 2, 395);
     ctx.fillStyle = '#71809e';
     ctx.font = '24px sans-serif';
-    ctx.fillText('通过 ' + r.starLevel + ' 星难度 · ' + E.modeName(r.mode) + ' · 第 ' + r.rounds + ' 轮', W / 2, 438);
+    ctx.fillText('读到第 ' + r.starLevel + ' 级 · ' + E.modeName(r.mode) + ' · 第 ' + r.rounds + ' 轮', W / 2, 438);
 
     /* 中间白色面板 + 豆豆 */
     ctx.fillStyle = '#ffffff';

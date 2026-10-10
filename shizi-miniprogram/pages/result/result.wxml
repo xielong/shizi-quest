@@ -44,7 +44,7 @@
     <view class="h3">各难度段表现</view>
     <view class="bars">
       <view wx:for="{{bars}}" wx:key="i" class="barrow">
-        <text class="lb">{{item.stars}}星</text>
+        <text class="lb">第{{item.stars}}级</text>
         <view class="tr"><view class="fill" style="width:{{item.w}}%;background:{{item.color}}"></view></view>
         <text class="pc">{{item.pcText}}</text>
         <text class="n">{{item.nText}}</text>

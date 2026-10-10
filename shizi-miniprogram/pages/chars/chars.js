@@ -32,7 +32,7 @@ Page({
     wx.setNavigationBarTitle({ title: this.data.tab === 0 ? '认识的字' : '生字本' });
   },
 
-  /* 按星级分组（字表里每个字都属于某一档） */
+  /* 按级别分组（字表里每个字都属于某一级） */
   buildGroups: function (chars) {
     var byLevel = {};
     chars.forEach(function (ch) {

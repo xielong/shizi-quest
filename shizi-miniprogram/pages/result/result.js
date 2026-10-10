@@ -35,8 +35,8 @@ Page(Object.assign({
     var knownGain = r.knownGain || 0;
 
     var starStars = [], i;
-    for (i = 1; i <= 10; i++) starStars.push({ i: i, on: i <= r.starLevel });
-    var levelText = '这一轮新认识 ' + knownGain + ' 个字 · 稳定掌握到 ' + r.starLevel + ' 星难度'
+    for (i = 1; i <= E.LEVELS.length; i++) starStars.push({ i: i, on: i <= r.starLevel });
+    var levelText = '这一轮新认识 ' + knownGain + ' 个字 · 稳定读到第 ' + r.starLevel + ' 级'
       + (isSent ? (' · 共读了 ' + r.sentCount + ' 句') : (' · 共做 ' + r.count + ' 题'));
 
     /* ---- 豆豆的成长 ---- */
