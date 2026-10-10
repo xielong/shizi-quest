@@ -281,9 +281,17 @@ function newSession(opt){
   s.priorN=priorCount(s.prior);
   s.priorRounds=(s.prior&&s.prior.rounds)||0;
   s.priorBoundary=s.prior?boundaryOfCounts(s.prior.asked, s.prior.correct, mode):0;
-  /* 起测关：上一轮的分界下面一关。孩子这次的证据会直接落在分界附近，
-     不用再从第 2 关一关一关爬上去 */
-  s.startLevel=(s.priorBoundary>0)?clamp(s.priorBoundary-1,2,LEVELS.length):2;
+  /* 起测关（2026-10-10 家长定的节奏：前两轮简单居多，之后按表现调整）：
+     · 第一轮：从第 1 关逐关往上爬（配合 stairDecide 里"第一轮不跳关"），
+       前几题都是最简单的字，孩子先有成就感；
+     · 第二轮：从上一轮分界下面两关起，还是偏简单；
+     · 第三轮起：分界下面一关起，证据直接落在分界附近 */
+  if(s.priorBoundary>0){
+    var back=(s.priorRounds>=2)?1:2;
+    s.startLevel=clamp(s.priorBoundary-back,2,LEVELS.length);
+  }else{
+    s.startLevel=1;
+  }
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
@@ -383,9 +391,10 @@ function stairDecide(s){
     s.floorFails=0;
     // 一组全对说明这一关太轻松，直接往上跳两关：题量省下来，
     // 也更容易摸到高难度那几关（不然题量上限一到就停在半路，估算只能靠外推）。
-    // 但只在低分段跳（落点不超过第 6 关）：再往上每段的字数大，跳过去留空档
-    // 就等于零证据白给分——这是 2026-10 家长反馈"全对就 5000"的一条根因
-    var jump=(aced&&c+2<=6)?2:1, next=c+jump;
+    // 两个限制：① 前两轮不跳（priorRounds<2），逐关爬、简单居多，第三轮起才跳；
+    // ② 只在低分段跳（落点不超过第 6 关）——再往上每段的字数大，
+    // 跳过去留空档就等于零证据白给分（"全对就 5000"的一条根因）
+    var jump=(aced&&c+2<=6&&s.priorRounds>=2)?2:1, next=c+jump;
     if(next>LEVELS.length) next=LEVELS.length;
     if(next===c){
       /* 已经站在最高关、又过关了：不再往上跳，直接转回头复核。
