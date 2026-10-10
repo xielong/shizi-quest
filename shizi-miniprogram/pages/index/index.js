@@ -257,6 +257,7 @@ Page({
     wx.navigateTo({ url: '/pages/test/test' });
   },
 
+  goChars: function () { wx.navigateTo({ url: '/pages/chars/chars' }); },
   goHelp: function () { wx.navigateTo({ url: '/pages/help/help' }); },
   goHistory: function () { wx.navigateTo({ url: '/pages/history/history' }); }
 });

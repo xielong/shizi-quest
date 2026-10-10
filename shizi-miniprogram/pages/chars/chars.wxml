@@ -1,0 +1,45 @@
+<view class="page">
+  <!-- 汇总 -->
+  <view class="card hero">
+    <view class="hero-name">{{name}} 的字库</view>
+    <view class="hero-nums">
+      <view class="hn">
+        <view class="hn-n ok">{{knownCnt}}</view>
+        <view class="hn-t">认识的字</view>
+      </view>
+      <view class="hn">
+        <view class="hn-n warn">{{wrongCnt}}</view>
+        <view class="hn-t">生字</view>
+      </view>
+      <view class="hn">
+        <view class="hn-n">{{testedCnt}}</view>
+        <view class="hn-t">测过的字</view>
+      </view>
+    </view>
+    <view class="muted small">每玩一轮，这里就会多几个字；同一个字以最近一次判定为准。生字认识之后会自动搬进「认识的字」。</view>
+  </view>
+
+  <!-- 切换 -->
+  <view class="tabs">
+    <view class="t {{tab==0?'on':''}}" data-t="0" bindtap="switchTab">认识的字 · {{knownCnt}}</view>
+    <view class="t {{tab==1?'on':''}}" data-t="1" bindtap="switchTab">生字本 · {{wrongCnt}}</view>
+  </view>
+
+  <view wx:if="{{empty}}" class="card emptycard">
+    <view class="ec-emoji">{{tab==0?'🌱':'🎉'}}</view>
+    <view>{{tab==0 ? '还没有认识的字——先去玩一轮，认识了的字都会收进这里。' : '暂时没有生字，认识的都记住啦，太棒了！'}}</view>
+  </view>
+
+  <!-- 分组展示 -->
+  <view wx:for="{{groups}}" wx:key="stars" class="card group">
+    <view class="g-head">
+      <text class="g-stars" style="background:{{item.color}}">{{item.stars}} 星</text>
+      <text class="g-name">{{item.name}}</text>
+      <text class="g-cnt">{{item.cnt}} 个</text>
+    </view>
+    <view class="g-chars">
+      <text wx:for="{{item.chars}}" wx:for-item="c" wx:key="ch"
+        class="gch {{tab==1?'w':''}}" data-c="{{c.ch}}" bindtap="showChar">{{c.ch}}</text>
+    </view>
+  </view>
+</view>

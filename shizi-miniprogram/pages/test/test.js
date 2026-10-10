@@ -270,6 +270,9 @@ Page({
       r.floored = true;
     }
 
+    /* 这一轮每个字的判定写进字库（认识/生字，最近一次为准）——「认识的字」页面看 */
+    store.charsApply(s.answers);
+
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
     store.setPrior(s.mode, E.priorNext(s, floor));

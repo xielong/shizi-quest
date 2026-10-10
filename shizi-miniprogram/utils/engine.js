@@ -487,7 +487,7 @@ function submitSentence(s,marks){
     s.asked[L]=(s.asked[L]||0)+1;
     s.count++; fresh++;
     if(marks&&marks[c]){ marked++; s.answers.push({level:L, ch:c, correct:false}); }
-    else { known++; s.correct[L]=(s.correct[L]||0)+1; }
+    else { known++; s.correct[L]=(s.correct[L]||0)+1; s.answers.push({level:L, ch:c, correct:true}); }
   }
   s.stars+=known;
   s.sentCount++;

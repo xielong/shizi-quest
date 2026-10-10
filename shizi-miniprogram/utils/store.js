@@ -133,6 +133,7 @@ function clearPlayerData(id) {
   safeDel(keyOf(BASE_SCENE, id));
   safeDel(keyOf(BASE_HIST, id));
   safeDel(keyOf(BASE_PRIOR, id));
+  safeDel(keyOf(BASE_CHARS, id));
 }
 
 /* ============ 下面这些读写的都是"当前小朋友"的数据 ============ */
@@ -155,6 +156,29 @@ function sceneSeen() {
   return isNaN(v) ? 0 : Math.max(0, v);
 }
 function sceneSetSeen(n) { safeSet(keyOf(BASE_SCENE, curId()), String(Math.max(0, n | 0))); }
+
+/* ---- 认识的字 / 生字（字库，按小朋友分开）----
+   每轮结算时把这一轮每个字的判定写进来，同一个字以最近一次为准：
+   认识了 → 收进 known；不认识 → 放进 wrong（生字本）。 */
+var BASE_CHARS = 'shizi_quest_chars_v1';
+
+function getChars() {
+  var v = parse(safeGet(keyOf(BASE_CHARS, curId())), {});
+  if (!v || typeof v !== 'object' || Array.isArray(v)) v = {};
+  if (!v.known || typeof v.known !== 'object') v.known = {};
+  if (!v.wrong || typeof v.wrong !== 'object') v.wrong = {};
+  return v;
+}
+function charsApply(answers) {
+  var v = getChars();
+  (answers || []).forEach(function (a) {
+    if (!a || !a.ch) return;
+    if (a.correct) { v.known[a.ch] = 1; delete v.wrong[a.ch]; }
+    else { v.wrong[a.ch] = 1; delete v.known[a.ch]; }
+  });
+  safeSet(keyOf(BASE_CHARS, curId()), JSON.stringify(v));
+  return v;
+}
 
 /* ---- 跨轮累积的答题证据 ----
    一场只做 10 题左右，光靠这一场估不准；所以每轮结束把"每关几题、对几题"
@@ -205,6 +229,7 @@ module.exports = {
   pandaTotal: pandaTotal, pandaSetTotal: pandaSetTotal, pandaAdd: pandaAdd,
   sceneSeen: sceneSeen, sceneSetSeen: sceneSetSeen,
   getPrior: getPrior, setPrior: setPrior,
+  getChars: getChars, charsApply: charsApply,
   loadHistory: loadHistory, saveHistory: saveHistory, pushRecord: pushRecord,
   getProfile: getProfile, setProfile: setProfile
 };

@@ -79,8 +79,9 @@
     </view>
     <button class="btn" style="margin-top:28rpx" bindtap="start">开始闯关 ★</button>
     <view class="row" style="margin-top:20rpx;gap:16rpx">
-      <button class="btn mini" style="flex:1" bindtap="goHelp">家长看这里（原理）</button>
+      <button class="btn mini" style="flex:1" bindtap="goChars">认识的字</button>
       <button class="btn mini" style="flex:1" bindtap="goHistory">成长记录</button>
+      <button class="btn mini" style="flex:1" bindtap="goHelp">家长看这里</button>
     </view>
   </view>
 

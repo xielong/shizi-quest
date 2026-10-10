@@ -1,0 +1,43 @@
+/* ---------- 字库页 ---------- */
+.hero { padding: 34rpx 30rpx; }
+.hero-name { font-size: 32rpx; font-weight: 800; color: #2b3a55; }
+.hero-nums { display: flex; gap: 20rpx; margin-top: 22rpx; }
+.hn {
+  flex: 1; background: #f7fafd; border-radius: 20rpx; padding: 22rpx 0;
+  text-align: center;
+}
+.hn-n { font-size: 44rpx; font-weight: 900; color: #2b3a55; line-height: 1.1; }
+.hn-n.ok { color: #25b981; }
+.hn-n.warn { color: #f07b4e; }
+.hn-t { font-size: 22rpx; color: #71809e; margin-top: 6rpx; }
+.small { font-size: 22rpx; margin-top: 18rpx; }
+
+/* 切换 */
+.tabs { display: flex; gap: 14rpx; margin: 22rpx 0; }
+.tabs .t {
+  flex: 1; text-align: center; padding: 18rpx 0; border-radius: 999rpx;
+  background: #fff; color: #71809e; font-weight: 700; font-size: 27rpx;
+  box-shadow: 0 6rpx 16rpx rgba(96, 124, 178, .08);
+}
+.tabs .t.on { background: #3ea6ff; color: #fff; }
+
+/* 空状态 */
+.emptycard { padding: 70rpx 40rpx; text-align: center; color: #71809e; line-height: 1.8; }
+.ec-emoji { font-size: 70rpx; margin-bottom: 14rpx; }
+
+/* 分组 */
+.group { padding: 26rpx 26rpx 20rpx; margin-bottom: 20rpx; }
+.g-head { display: flex; align-items: center; gap: 14rpx; }
+.g-stars {
+  color: #fff; font-size: 21rpx; font-weight: 800;
+  border-radius: 999rpx; padding: 4rpx 16rpx;
+}
+.g-name { font-size: 25rpx; font-weight: 700; color: #2b3a55; }
+.g-cnt { margin-left: auto; font-size: 23rpx; color: #a0aec6; }
+.g-chars { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 18rpx; }
+.gch {
+  width: 78rpx; height: 78rpx; display: flex; align-items: center; justify-content: center;
+  background: #eaf9f1; color: #25b981; border-radius: 16rpx;
+  font-size: 42rpx; font-weight: 800;
+}
+.gch.w { background: #fff1ea; color: #f07b4e; }
