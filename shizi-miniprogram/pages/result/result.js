@@ -74,11 +74,10 @@ Page(Object.assign({
         i: i + 1, stars: l.stars, color: known ? l.color : '#e6ecf8',
         w: known ? Math.max(pct, 2) : 0,
         pcText: pct + '%',
-        nText: '认出' + known + '/' + l.chars.length
+        nText: known + '/' + l.chars.length
       };
     });
-    var barsNote = '每一条＝这一级已经认出的字数 ÷ 这一级的总字数（右边如「认出4/60」＝这一级共 60 个字、已认出 4 个），'
-      + '认识的字跨轮累积、越攒越多；程序按各段表现调整下一轮的难度，每轮最多往上开两级。';
+    var barsNote = '右边 ＝ 这一级认出的字数 / 总字数';
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {
