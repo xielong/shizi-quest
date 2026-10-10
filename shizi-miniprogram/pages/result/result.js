@@ -69,11 +69,11 @@ Page(Object.assign({
         i: L.i, stars: L.stars, color: tested ? L.color : '#e6ecf8',
         w: tested ? Math.max(pct, 2) : 0,
         pcText: tested ? pct + '%' : '—',
-        nText: tested ? (L.correct + '/' + L.asked) : '未测'
+        nText: tested ? ('认对' + L.correct + '/' + L.asked) : '未测'
       };
     });
-    var barsNote = '颜色越长表示这一段的字认识得越多（题数是几轮合起来的）。'
-      + '程序按这个表现调整下一轮的出题难度：都认识就往上探，碰壁了就在附近多测。';
+    var barsNote = '最右边的「认对4/4」＝这一段测了 4 个字、认对 4 个（题数是几轮合起来的）。'
+      + '程序按这个表现调整下一轮的难度：都认识就往上探，碰壁了就在附近多测；每轮最多往上开两级。';
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {

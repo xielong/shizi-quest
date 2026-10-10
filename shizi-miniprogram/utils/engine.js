@@ -486,6 +486,11 @@ function newSession(opt){
   }else{
     s.startLevel=1;
   }
+  /* 关卡解锁节奏（2026-10-10 家长反馈"第二轮就出现八九级"）：
+     每轮最多比上一轮往上探两级——第1轮≤4级、第2轮≤6、第3轮≤8、第4轮起≤10。
+     全对的孩子也不能一步登天，慢慢往上开 */
+  s.lvCap=Math.min(LEVELS.length, 2+2*((s.priorRounds||0)+1));
+  if(s.startLevel>s.lvCap-2) s.startLevel=Math.max(1,s.lvCap-2);
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
@@ -546,7 +551,7 @@ function findBoundary(s){ return boundaryOfCounts(s.asked, s.correct, s.mode); }
    分界很靠前（小朋友认识的字很少）时，上面只摸 3 题，别让他连做一堆超纲字 */
 
 function topupNext(s){
-  var L=LEVELS.length, b=s.boundary;
+  var L=LEVELS.length, b=Math.min(s.boundary, s.lvCap||L);   /* 分界也被本轮上限压着 */
   var boost=(s.topupBoost||0);                 /* 「接着再答几道」时放开的额度 */
   var topn=TOPN+boost;
   var above=((b<=2)?3:TOP_ABOVE)+boost;
@@ -568,7 +573,7 @@ function topupNext(s){
   }
   if((s.asked[b]||0)<topn) return b;                     // 先把分界把关补足
   if((s.asked[b-1]||0)<topn) return b-1;                 // 再把下面稳过的那关补足
-  if(b+1<=L && (s.asked[b+1]||0)<above) return b+1;      // 上面再摸几题，摸摸尾巴
+  if(b+1<=L && b+1<=(s.lvCap||L) && (s.asked[b+1]||0)<above) return b+1;      // 上面再摸几题，也压着本轮上限
   if(b-2>=1 && (s.asked[b-2]||0)<3) return b-2;          // 小朋友年龄小，再往下垫一关
   return 0;
 }
@@ -590,6 +595,7 @@ function stairDecide(s){
     // 跳过去留空档就等于零证据白给分（"全对就 5000"的一条根因）
     var jump=(aced&&c+2<=LEVELS.length-2&&s.priorRounds>=2)?2:1, next=c+jump;
     if(next>LEVELS.length) next=LEVELS.length;
+    if(next>s.lvCap) next=s.lvCap;   /* 本轮的关卡上限 */
     if(next===c){
       /* 已经站在最高关、又过关了：不再往上跳，直接转回头复核。
          这里不能顺手判成"测到顶"——一组两题只对一题也算过关（PASS_NEED=1），
@@ -633,7 +639,7 @@ function sentTarget(s){
   var marked=0, k;
   for(k in s.asked){ if(Object.prototype.hasOwnProperty.call(s.asked,k)) marked+=(s.asked[k]||0)-((s.correct&&s.correct[k])||0); }
   var step=base+Math.floor(s.sentCount/(marked===0?1:2));
-  return clamp(Math.min(b,step),1,LEVELS.length);
+  return clamp(Math.min(b,step),1,Math.min(LEVELS.length,s.lvCap||LEVELS.length));
 }
 
 function pickSentence(s){
