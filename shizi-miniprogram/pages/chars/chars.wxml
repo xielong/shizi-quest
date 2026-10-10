@@ -33,7 +33,7 @@
   <!-- 分组展示 -->
   <view wx:for="{{groups}}" wx:key="stars" class="card group">
     <view class="g-head">
-      <text class="g-stars" style="background:{{item.color}}">第{{item.stars}}级</text>
+      <text class="g-stars" style="background:{{item.color}}">{{item.stars}} 星</text>
       <text class="g-name">{{item.name}}</text>
       <text class="g-cnt">{{item.cnt}} 个</text>
     </view>
