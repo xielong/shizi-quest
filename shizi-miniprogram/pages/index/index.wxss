@@ -83,3 +83,5 @@
 .formrow .inp,
 .formrow picker,
 .formrow picker .inp { width: 100%; box-sizing: border-box; display: block; }
+/* 原生 input 和普通 view 的默认行高不一致 → 统一固定高度 */
+.formrow .inp { height: 84rpx; line-height: 84rpx; padding: 0 24rpx; overflow: hidden; }
