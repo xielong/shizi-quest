@@ -1111,5 +1111,15 @@ function levelProgress(s){
   return clamp(s.count/(s.cap||MAX_Q),0.02,0.97);
 }
 
+/* 星级 = 按累计认识字数的闯关进度（实测口径，2026-10-10 定）：
+   认识满前面各级的容量（60/120/180/…）就点亮那颗星，跟主数字同一个口径。
+   以前星级是"认识率≥50% 的最高段"——只测 4 个字碰巧全对也能点亮四星，
+   家长看着"才认识 4 个字就四星"很困惑 */
+function levelFromKnown(n){
+  var lv=0, acc=0;
+  for(var i=0;i<LEVELS.length;i++){ acc+=LEVELS[i].size; if((n||0)>=acc) lv=i+1; else break; }
+  return lv;
+}
+
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress, levelFromKnown };

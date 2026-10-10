@@ -124,7 +124,7 @@ module.exports = {
     ctx.fillText(starTxt, W / 2, 395);
     ctx.fillStyle = '#71809e';
     ctx.font = '24px sans-serif';
-    ctx.fillText('通过 ' + r.starLevel + ' 星难度 · ' + E.modeName(r.mode) + ' · 第 ' + r.rounds + ' 轮', W / 2, 438);
+    ctx.fillText((r.starLevel > 0 ? '已点亮 ' + r.starLevel + ' 星' : '继续加油！') + ' · ' + E.modeName(r.mode) + ' · 第 ' + r.rounds + ' 轮', W / 2, 438);
 
     /* 中间白色面板 + 豆豆 */
     ctx.fillStyle = '#ffffff';

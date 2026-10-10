@@ -278,6 +278,9 @@ Page({
     r.knownTotal = Object.keys(inv.known).length;
     r.knownGain = r.knownTotal - knownBefore;
     r.wrongTotal = Object.keys(inv.wrong).length;
+    /* 星级也换实测口径：认识满各级容量点亮（60 字一星、120 二星…），
+       不再用"认识率≥50% 的最高段"——那个算法 4 个字就能点亮四星 */
+    r.starLevel = E.levelFromKnown(r.knownTotal);
 
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
