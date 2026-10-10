@@ -8,10 +8,9 @@
     <view class="li">一轮 10 题 / 7 句就收工，孩子坐得住。中途随时可以停。</view>
 
     <view class="h4">数字怎么看</view>
-    <view class="li">累计测满 <text class="hl">20 个字</text>才出分数；第一轮通常不出分，<text class="b">再玩一轮就有了</text>。</view>
-    <view class="li">数字<text class="b">只少不多</text>：没测到的难度段不给分，且上限＝已测字数 × 100。所以刚开测会偏保守，<text class="b">同一玩法多玩两三轮，数字就准了</text>。</view>
-    <view class="li">写「<text class="b">至少 N 字</text>」＝还没测到他认不出的那条线，这是下限，不是精确值。</view>
-    <view class="li">测的时候<text class="b">不要提示、不要催</text>；结果是估算值，别拿它排名。两种玩法数字略有差异以读一读为准。</view>
+    <view class="li">「已认识 N 个字」<text class="b">只算真测过并认识的字</text>：每玩一轮，新认识的字就加进去，生字进了生字本、复习认识了再搬回来。没测到的字不猜、不估。</view>
+    <view class="li">出题难度会<text class="b">跟着孩子的表现自动调</text>：都认识就往上探，碰壁了就在附近多测——所以同一个玩法越玩越贴合他的水平。</view>
+    <view class="li">测的时候<text class="b">不要提示、不要催</text>；数字是实测记录，别拿它排名。两种玩法略有差异，以读一读为准。</view>
 
     <view class="h4">豆豆和小奖励</view>
     <view class="li">认对字，熊猫「豆豆」会长大、搬家（四季小世界），点他还能转身。首页「认识的字」能看到他攒下的每个字。</view>
@@ -19,7 +18,7 @@
     <view class="h4">好几个小朋友？</view>
     <view class="li">首页「谁在玩」点名字换人，每个人的进度完全独立；「＋」加人，长按改名或删除。</view>
 
-    <view class="h4">识字量参考（常见经验值）</view>
+    <view class="h4">识字量参考（常见经验值，对照着看个大概）</view>
     <view class="ref">
       <view wx:for="{{refRows}}" wx:key="i" class="refrow">
         <text>{{item.label}}</text><text>{{item.range}}</text>

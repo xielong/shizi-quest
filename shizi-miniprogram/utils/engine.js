@@ -669,7 +669,23 @@ function submitSentence(s,marks){
   var sen=s.curSentence, marked=0, known=0, fresh=0;
   for(var k=0;k<sen.uniq.length;k++){
     var c=sen.uniq[k];
-    if(s.seen[c]) continue;                       // 这个字之前统计过了，跳过
+    if(s.seen[c]){
+      /* 这个字前面的句子判过了。当时没标（记了认识）、这次家长标了红：
+         把之前那条记录翻转成"不认识"——不然红点了个寂寞，字库里还躺在
+         "认识"里（2026-10-10 家长反馈"点不认识也会进认识的字"） */
+      if(marks&&marks[c]){
+        for(var a2=s.answers.length-1;a2>=0;a2--){
+          if(s.answers[a2].ch===c && s.answers[a2].correct){
+            s.answers[a2].correct=false;
+            var L2=s.answers[a2].level;
+            s.correct[L2]=Math.max(0,(s.correct[L2]||1)-1);
+            s.stars=Math.max(0,(s.stars||1)-1);
+            break;
+          }
+        }
+      }
+      continue;
+    }
     s.seen[c]=1;
     var L=LEVEL_OF[c]||1;
     s.asked[L]=(s.asked[L]||0)+1;

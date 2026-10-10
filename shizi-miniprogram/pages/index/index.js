@@ -185,7 +185,9 @@ Page({
       var prev = 0, i;
       for (i = 0; i < E.PANDA_PARTS.length; i++) { if (E.PANDA_PARTS[i].at <= total) prev = E.PANDA_PARTS[i].at; }
       pct = Math.max(4, Math.min(100, Math.round((total - prev) / (next.at - prev) * 100)));
-      ppText = '再认识 ' + (next.at - total) + ' 个字，豆豆就能长出「' + next.name + '」';
+      /* 门槛单位是"成长值"，答对一个字记 2 点（EARN_RATE）——提示要换算成字数，
+         不然家长看着"再认 3 个字"，孩子答对 2 题就达标了（2026-10-10 反馈） */
+      ppText = '再答对 ' + Math.ceil((next.at - total) / E.EARN_RATE) + ' 个字，豆豆就能长出「' + next.name + '」';
     } else {
       ppText = '豆豆的零件全都长齐啦，真了不起！';
     }
@@ -199,7 +201,7 @@ Page({
       ppText: ppText,
       chips: P.partWall(total),
       worldLine: cur.emoji + ' ' + cur.name +
-        (sn ? ('　·　再认 ' + (sn.at - total) + ' 个字，豆豆就搬去「' + sn.name + '」')
+        (sn ? ('　·　再答对 ' + Math.ceil((sn.at - total) / E.EARN_RATE) + ' 个字，豆豆就搬去「' + sn.name + '」')
             : '　·　这是豆豆最喜欢的地方啦')
     });
   },

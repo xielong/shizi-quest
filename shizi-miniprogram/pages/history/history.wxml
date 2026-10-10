@@ -16,7 +16,7 @@
     <view wx:for="{{rows}}" wx:key="ts" class="histitem">
       <text class="dt">{{item.date}}</text>
       <text class="who">{{item.who}}</text>
-      <text class="es">{{item.est}} 字</text>
+      <text class="es">认识 {{item.est}} 个字</text>
       <text class="st">★{{item.stars}}</text>
     </view>
 

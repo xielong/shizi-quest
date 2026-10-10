@@ -32,8 +32,8 @@ module.exports = {
   /* 生成成绩卡：画布 → 图片 → 菜单（保存/发送） */
   makeCard: function () {
     var r = this.data.r;
-    if (!r || !r.enough) {
-      wx.showToast({ title: '测够字数才能生成哦', icon: 'none' });
+    if (!r) {
+      wx.showToast({ title: '还没有成绩哦', icon: 'none' });
       return;
     }
     var that = this;
@@ -82,8 +82,6 @@ module.exports = {
   paintCard: function (ctx, canvas, W, H) {
     var r = this.data.r, that = this;
     var profile = getApp().profile();
-    var isLow = !!(r.topOut || r.allOk || r.floored || (r.misses === 0 && r.count > 0));
-    var word = isLow ? '至少' : '约';
 
     /* 背景：浅蓝渐变 + 圆角 */
     var g = ctx.createLinearGradient(0, 0, 0, H);
@@ -108,18 +106,15 @@ module.exports = {
     ctx.font = 'bold 40px sans-serif';
     ctx.fillText('识字大冒险', W / 2, 86);
     ctx.font = '24px sans-serif';
-    ctx.fillText(profile.name + '（' + profile.age + ' 岁）的识字量', W / 2, 140);
+    ctx.fillText(profile.name + '（' + profile.age + ' 岁）已经认识', W / 2, 140);
 
     /* 大数字 */
-    ctx.fillStyle = '#2b3a55';
-    ctx.font = '30px sans-serif';
-    ctx.fillText(word, W / 2 - 118, 320);
     ctx.font = 'bold 130px sans-serif';
     ctx.fillStyle = '#2b8fe0';
-    ctx.fillText(String(r.est), W / 2, 335);
+    ctx.fillText(String(r.knownTotal || 0), W / 2, 335);
     ctx.fillStyle = '#2b3a55';
     ctx.font = '30px sans-serif';
-    ctx.fillText('字', W / 2 + 130, 320);
+    ctx.fillText('个字', W / 2 + 145, 320);
 
     /* 星级 */
     var starTxt = '';
@@ -153,7 +148,7 @@ module.exports = {
       /* 底部 */
       ctx.fillStyle = '#a0aec6';
       ctx.font = '22px sans-serif';
-      ctx.fillText('多玩几轮，数字会更准 · ' + E.todayStr(), W / 2, 745);
+      ctx.fillText('每天认识几个字，和豆豆一起长大 · ' + E.todayStr(), W / 2, 745);
       ctx.fillStyle = '#c3cfdf';
       ctx.fillText('识字大冒险 · 微信小程序', W / 2, 780);
     });

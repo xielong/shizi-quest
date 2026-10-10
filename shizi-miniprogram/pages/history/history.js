@@ -14,18 +14,21 @@ Page({
 
   onShow: function () {
     var hist = store.loadHistory();
+    /* 2026-10-10 起主数字是实测「已认识 N 个字」（记录里的 known 字段）；
+       老记录没有 known 的用旧估算凑合显示，但曲线只画有 known 的记录 */
     var rows = hist.slice().reverse().map(function (h) {
       return {
         ts: h.ts, date: h.date,
         who: h.name + ' · ' + h.age + '岁 · ' + E.modeName(h.mode),
-        est: h.est, stars: h.stars
+        est: (h.known !== undefined ? h.known : h.est), stars: h.stars
       };
     });
+    var knownHist = hist.filter(function (h) { return h.known !== undefined; });
     this.setData({
-      hist: hist, rows: rows, hasChart: hist.length >= 2,
+      hist: hist, rows: rows, hasChart: knownHist.length >= 2,
       curName: store.curPlayer().name
     });
-    if (hist.length >= 2) this.drawChart(hist);
+    if (knownHist.length >= 2) this.drawChart(knownHist);
   },
 
   drawChart: function (hist) {
@@ -47,7 +50,7 @@ Page({
 
   paint: function (ctx, W, H, hist) {
     var data = hist.slice(-12);
-    var vals = data.map(function (d) { return d.est; });
+    var vals = data.map(function (d) { return d.known; });
     var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
     if (mx === mn) mx = mn + 100;
     var span = mx - mn;

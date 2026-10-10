@@ -270,8 +270,14 @@ Page({
       r.floored = true;
     }
 
-    /* 这一轮每个字的判定写进字库（认识/生字，最近一次为准）——「认识的字」页面看 */
+    /* 这一轮每个字的判定写进字库（认识/生字，最近一次为准）——结果页主数字、
+       「认识的字」页面都读这里。主数字＝实测累计，不再展示估算（2026-10-10 定） */
+    var knownBefore = Object.keys(store.getChars().known).length;
     store.charsApply(s.answers);
+    var inv = store.getChars();
+    r.knownTotal = Object.keys(inv.known).length;
+    r.knownGain = r.knownTotal - knownBefore;
+    r.wrongTotal = Object.keys(inv.wrong).length;
 
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
@@ -292,15 +298,13 @@ Page({
       store.sceneSetSeen(unlocked);
     }
 
-    /* 历史记录（字段与网页版一致）。样本不够、不出分数的那次不入记录，
-       免得成长记录里出现一条没有分数的数据 */
-    if (r.enough) {
-      store.pushRecord({
-        date: E.todayStr(), ts: Date.now(), name: s.name, age: s.age, mode: s.mode,
-        est: r.est, lo: r.lo, hi: r.hi, stars: r.starLevel,
-        count: r.count, correct: r.correctTotal, sent: r.sentCount || 0
-      });
-    }
+    /* 历史记录：每轮都入（主数字是实测计数，不存在"样本不够没分数"的轮次） */
+    store.pushRecord({
+      date: E.todayStr(), ts: Date.now(), name: s.name, age: s.age, mode: s.mode,
+      known: r.knownTotal, wrong: r.wrongTotal, stars: r.starLevel,
+      est: r.est, lo: r.lo, hi: r.hi,
+      count: r.count, correct: r.correctTotal, sent: r.sentCount || 0
+    });
 
     app.globalData.lastResult = r;
     app.globalData.lastFresh = {
@@ -320,17 +324,10 @@ Page({
       wx.navigateBack();
       return;
     }
-    /* 测得太少就不给分数，所以这时候别问"要不要出结果"，
-       直接告诉家长"再玩一轮就够"（不拦着他退出，只是说明清楚） */
-    var tested = E.testedTotal(s), enough = tested >= E.MIN_TESTED;
     wx.showModal({
-      title: enough ? '退出测试' : '还差一些字才给分数',
-      content: enough
-        ? ('已经测的 ' + s.count + ' 个字会算出结果，确定退出吗？')
-        : ('一共才测了 ' + tested + ' 个字，至少累计测满 ' + E.MIN_TESTED + ' 个才给分数，'
-           + '还差 ' + (E.MIN_TESTED - tested) + ' 个。现在退出这一次不会有分数；'
-           + '同一玩法再玩一轮、累计够了就出分。'),
-      confirmText: enough ? '出结果' : '还是要退出',
+      title: '退出测试',
+      content: '已经测的 ' + s.count + ' 个字会计入结果，确定退出吗？',
+      confirmText: '出结果',
       cancelText: '继续测',
       success: function (res) { if (res.confirm) that.finish(); }
     });

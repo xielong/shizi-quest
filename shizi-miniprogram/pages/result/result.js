@@ -1,5 +1,7 @@
 /* =========================================================================
-   结果页：识字量 + 豆豆的成长 + 各段表现 + 参考坐标 + 奖状
+   结果页：已认识的字（实测口径）+ 豆豆的成长 + 各段表现 + 参考坐标 + 奖状
+   2026-10-10 起主数字改为字库实测累计（认识多少字以真判过的为准，
+   估算只留在引擎里调节难度，不再上界面）
    ========================================================================= */
 var E = require('../../utils/engine.js');
 var store = require('../../utils/store.js');
@@ -9,11 +11,9 @@ var Card = require('./result_card.js');
 
 Page(Object.assign({
   data: {
-    name: '', shownEst: 0, heroTitle: '',
+    name: '', shownEst: 0,
     r: null, starStars: [], levelText: '',
-    topOut: false, noMiss: false, estWord: '约',
-    enough: true, shortText: '',
-    accumText: '', roughText: '', noMissText: '',
+    wrongTotal: 0,
     pandaText: '', panda: [], sceneSrc: '', sceneTag: '', snow: [],
     parts: [], scenes: [], worldNote: '',
     bars: [], barsNote: '',
@@ -30,66 +30,14 @@ Page(Object.assign({
     var profile = app.profile();
     var total = store.pandaTotal();
     var isSent = r.mode === 'sentence';
-    /* 一道都没答错 —— 分两种情况：
-       ① topOut：真的一路全对闯到了最高关，这张表量不出他了；
-       ② noMiss：只是这一轮没答错（题还没做完 / 提前退出，或者他恰好没碰到生字）。
-       两种都是"下限"口径，但 ② 必须说清楚，不然家长会以为孩子就认识这么点、
-       或者（旧版本的毛病）看着数字贴到 5000 一头雾水。 */
-    var topOut = !!r.topOut;
-    /* 没摸到分界就收工的（全对，或只错了两三题但没有哪段认识率掉到一半以下）：
-       数字都是下限口径（r.allOk 由 engine 判定），黄框文案按有没有答错过区分 */
-    var noMiss = ((r.misses === 0 || r.allOk) && r.count > 0 && !topOut);
-    /* 棘轮生效：这轮估出的数比历史「至少」下限还低，显示历史下限（见 test.js finish） */
-    var floored = !!r.floored;
-    /* 样本够不够：累计测满 MIN_TESTED 个字才出分数。
-       不够的时候整页都不显示数字 —— 只答了几道题，算出来的"识字量"没有意义，
-       家长要看到的是"还需要再多答几道"。 */
-    var enough = !!r.enough;
+    var knownTotal = (r.knownTotal !== undefined) ? r.knownTotal : 0;
+    var wrongTotal = (r.wrongTotal !== undefined) ? r.wrongTotal : 0;
+    var knownGain = r.knownGain || 0;
 
-    /* ---- hero ---- */
     var starStars = [], i;
     for (i = 1; i <= 10; i++) starStars.push({ i: i, on: i <= r.starLevel });
-    var howDone = isSent
-      ? ('共读了 ' + r.sentCount + ' 句、测到 ' + r.distinct + ' 个字，其中 ' + r.correctTotal + ' 个认识')
-      : ('共做 ' + r.count + ' 题、认识 ' + r.correctTotal + ' 题');
-    /* 跨轮累积：这一场题少，数字是"这一轮 + 前面几轮"一起算出来的，得跟家长讲清楚 */
-    var priorN = r.priorN || 0;
-    var accumText = priorN > 0
-      ? ('这是第 ' + (r.rounds || 2) + ' 轮。一场只出十来题，免得孩子坐不住；'
-         + '所以上面这个数字是把「这一轮 ' + r.count + ' 题」和「前面攒下的 ' + priorN + ' 题」合起来算的。')
-      : '';
-    var roughText = (priorN > 0 || noMiss)
-      ? ''
-      : ('这是第一轮摸底，一共才 ' + r.count + ' 题，先看个大概就好。'
-         + '用同一种玩法再玩一两轮，前面的证据会累加进来，数字会稳很多。');
-    /* 没答错过（或只错了两三题、分界没露出来）→ 数字是下限，得说清楚 */
-    var noMissText = noMiss
-      ? ((r.misses === 0
-        ? ('他这轮 ' + r.count + ' 题一道都没答错，')
-        : ('他这轮 ' + r.count + ' 题里只错了 ' + r.misses + ' 题，而且没有哪一段的字认到一半以下，'))
-         + '说明还没摸到"他认不出的那条线"，'
-         + '所以上面这个数字是保守下限（至少这么多），不是精确值——'
-         + '每一段都按"证据能证明的下限"折算，宁可少报；'
-         + '而且测的字还少，数字上限也压着（测满 100 个字才能报到 5000）。'
-         + '用同一种玩法再玩一两轮，证据累加进来、上限放开，数字自己会往上走。')
-      : '';
-    var levelText;
-    if (!enough) {
-      levelText = '这次一共测了 ' + r.testedN + ' 个字（' + howDone + '），题目太少了。'
-        + '至少测满 ' + r.minTested + ' 个字才出分数——题太少的话，算出来的数字没有意义，所以先不显示。';
-    } else if (topOut) {
-      levelText = '全部答对！一路闯到最高难度（' + E.LEVELS[E.LEVELS.length - 1].name + '），' + howDone;
-    } else if (noMiss) {
-      levelText = '这轮一道都没答错，还没碰到他认不出的字，' + howDone;
-    } else {
-      levelText = r.starLevel > 0
-        ? ('稳定掌握到 ' + r.starLevel + ' 星难度（' + E.LEVELS[r.starLevel - 1].name + '），' + howDone)
-        : ('本次认识 ' + r.correctTotal + ' 个字，' + howDone);
-    }
-    /* 样本不够时给家长下一步：说清楚"还差几个字、怎么补"，并安抚一句豆豆照长 */
-    var shortText = enough ? '' 
-      : ('同一套玩法再答一轮就行：前面测过的字会累加进来，攒够 ' + r.minTested + ' 个字马上出分数。'
-         + '豆豆的成长值已经记上了，这几道题没白答。');
+    var levelText = '这一轮新认识 ' + knownGain + ' 个字 · 稳定掌握到 ' + r.starLevel + ' 星难度'
+      + (isSent ? (' · 共读了 ' + r.sentCount + ' 句') : (' · 共做 ' + r.count + ' 题'));
 
     /* ---- 豆豆的成长 ---- */
     var pun = E.pandaUnlocked(total), pnext = E.pandaNext(total), freshNames = [];
@@ -97,7 +45,7 @@ Page(Object.assign({
     var pandaText = freshNames.length
       ? ('这次新长出了 ' + freshNames.join('、') + '！豆豆现在一共有 ' + pun.length + ' 个零件。')
       : (pnext
-        ? ('这次没有长出新零件。再认对 ' + (pnext.at - total) + ' 个字，豆豆就能长出「' + pnext.name + '」了。')
+        ? ('这次没有长出新零件。再答对 ' + Math.ceil((pnext.at - total) / E.EARN_RATE) + ' 个字，豆豆就能长出「' + pnext.name + '」了。')
         : '豆豆的零件已经全部长齐啦，真厉害！');
 
     var cur = E.sceneCur(total), scNext = E.sceneNext(total);
@@ -106,10 +54,10 @@ Page(Object.assign({
     var worldNote = freshScNames.length
       ? ('豆豆这次搬去了 ' + freshScNames.join('、') + '！')
       : (scNext
-        ? ('豆豆现在住在 ' + cur.name + '，再认 ' + (scNext.at - total) + ' 个字就搬去「' + scNext.name + '」')
+        ? ('豆豆现在住在 ' + cur.name + '，再答对 ' + Math.ceil((scNext.at - total) / E.EARN_RATE) + ' 个字就搬去「' + scNext.name + '」')
         : '豆豆把四个季节都住遍啦，真了不起！');
 
-    /* ---- 条形图 ---- */
+    /* ---- 条形图（各难度段的实测认识率，决定下一轮从哪测） ---- */
     var bars = r.levels.map(function (L) {
       var tested = L.asked > 0;
       var pct = Math.round(L.pc * 100);
@@ -120,13 +68,8 @@ Page(Object.assign({
         nText: tested ? (L.correct + '/' + L.asked) : '未测'
       };
     });
-    var barsNote = isSent
-      ? '句子模式统计的是"不同的字"：4/6 就是这一段出现了 6 个不同的字、认出来 4 个（同一个字重复出现只算一次）。题数把前面几轮也一起算进来了，所以可能比这一轮做的多。标「未测」的难度段这一轮没出到题，估算时不给它加分——所以上面的数字不会凭想象往上飘。'
-      : '颜色越长表示这一段的字认识得越多；题数是"这一轮 + 前面几轮"合起来的（一场题少，靠多轮累积看趋势）。标「未测」的难度段这一轮没出到题，估算时不给它加分——所以上面的数字不会凭想象往上飘。';
-    if (r.allOk) {
-      barsNote += ' 这轮一道没错：每段按小样本的置信下限折算（宁可少报），'
-        + '所以长条不到 100% 是正常的——画出来的是"证据确凿"的部分。';
-    }
+    var barsNote = '颜色越长表示这一段的字认识得越多（题数是几轮合起来的）。'
+      + '程序按这个表现调整下一轮的出题难度：都认识就往上探，碰壁了就在附近多测。';
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {
@@ -137,17 +80,9 @@ Page(Object.assign({
     this.setData({
       name: profile.name,
       r: r,
-      heroTitle: enough
-        ? (profile.name + ' 的识字量' + ((topOut || noMiss || floored) ? '至少' : '约'))
-        : ('还差 ' + r.needN + ' 个字就能出分数'),
+      wrongTotal: wrongTotal,
       starStars: starStars,
       levelText: levelText,
-      topOut: topOut,
-      noMiss: noMiss,
-      enough: enough,
-      shortText: shortText,
-      estWord: (topOut || noMiss || floored) ? '至少' : '约',
-      accumText: accumText, roughText: roughText, noMissText: noMissText,
       pandaText: pandaText,
       panda: P.layers(total, 'front'),
       sceneSrc: P.sceneImage(total),
@@ -163,10 +98,10 @@ Page(Object.assign({
       bars: bars, barsNote: barsNote,
       refRows: refRows,
       wrong: r.wrong.slice(0, 40),
-      certMeta: profile.age + ' 岁 · 收集到 ' + r.starLevel + ' 颗难度星 · ' + E.todayStr()
+      certMeta: profile.age + ' 岁 · 已认识 ' + knownTotal + ' 个字 · ' + E.todayStr()
     });
 
-    if (enough) this.animNumber(r.est);
+    this.animNumber(knownTotal);
   },
 
   /* 数字滚动 */
