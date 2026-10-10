@@ -61,19 +61,24 @@ Page(Object.assign({
         ? ('豆豆现在住在 ' + cur.name + '，再认识 ' + (scNext.at - total) + ' 个新字就搬去「' + scNext.name + '」')
         : '豆豆把四个季节都住遍啦，真了不起！');
 
-    /* ---- 条形图（各难度段的实测认识率，决定下一轮从哪测） ---- */
-    var bars = r.levels.map(function (L) {
-      var tested = L.asked > 0;
-      var pct = Math.round(L.pc * 100);
+    /* ---- 条形图（每一级认出的字数 ÷ 这一级的总字数，按字库跨轮累积） ---- */
+    var byLv = {};
+    Object.keys(store.getChars().known).forEach(function (ch) {
+      var L = E.LEVEL_OF[ch] || 1;
+      byLv[L] = (byLv[L] || 0) + 1;
+    });
+    var bars = E.LEVELS.map(function (l, i) {
+      var known = byLv[i + 1] || 0;
+      var pct = Math.round(known / l.chars.length * 100);
       return {
-        i: L.i, stars: L.stars, color: tested ? L.color : '#e6ecf8',
-        w: tested ? Math.max(pct, 2) : 0,
-        pcText: tested ? pct + '%' : '—',
-        nText: tested ? ('认对' + L.correct + '/' + L.asked) : '未测'
+        i: i + 1, stars: l.stars, color: known ? l.color : '#e6ecf8',
+        w: known ? Math.max(pct, 2) : 0,
+        pcText: pct + '%',
+        nText: '认出' + known + '/' + l.chars.length
       };
     });
-    var barsNote = '最右边的「认对4/4」＝这一段测了 4 个字、认对 4 个（题数是几轮合起来的）。'
-      + '程序按这个表现调整下一轮的难度：都认识就往上探，碰壁了就在附近多测；每轮最多往上开两级。';
+    var barsNote = '每一条＝这一级已经认出的字数 ÷ 这一级的总字数（右边如「认出4/60」＝这一级共 60 个字、已认出 4 个），'
+      + '认识的字跨轮累积、越攒越多；程序按各段表现调整下一轮的难度，每轮最多往上开两级。';
 
     /* ---- 同龄参考 ---- */
     var refRows = E.AGE_REF.map(function (row) {
