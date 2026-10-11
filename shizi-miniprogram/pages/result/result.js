@@ -151,7 +151,8 @@ Page(Object.assign({
     var r = this.data.r;
     var session = E.newSession({
       name: profile.name, age: profile.age, mode: r.mode,
-      prior: store.getPrior(r.mode)
+      prior: store.getPrior(r.mode),
+      tested: store.charsSeenMap()
     });
     app.globalData.session = session;
     wx.redirectTo({ url: '/pages/test/test' });

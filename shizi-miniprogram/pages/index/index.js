@@ -257,7 +257,8 @@ Page({
     var mode = this.data.mode;
     var session = E.newSession({
       name: p.name, age: p.age, mode: mode,
-      prior: store.getPrior(mode)
+      prior: store.getPrior(mode),
+      tested: store.charsSeenMap()
     });
     app.globalData.session = session;
     wx.navigateTo({ url: '/pages/test/test' });

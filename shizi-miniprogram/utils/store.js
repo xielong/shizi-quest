@@ -180,6 +180,14 @@ function charsApply(answers) {
   return v;
 }
 
+/* 已测过的字（认识+生字合并成一张查表），给引擎选句用 */
+function charsSeenMap() {
+  var v = getChars(), m = {}, k;
+  for (k in v.known) m[k] = 1;
+  for (k in v.wrong) m[k] = 1;
+  return m;
+}
+
 /* ---- 跨轮累积的答题证据 ----
    一场只做 10 题左右，光靠这一场估不准；所以每轮结束把"每关几题、对几题"
    折价存下来（E.priorTrim），下一轮开测时再喂回去（E.newSession 的 prior）。
@@ -229,7 +237,7 @@ module.exports = {
   pandaTotal: pandaTotal, pandaSetTotal: pandaSetTotal, pandaAdd: pandaAdd,
   sceneSeen: sceneSeen, sceneSetSeen: sceneSetSeen,
   getPrior: getPrior, setPrior: setPrior,
-  getChars: getChars, charsApply: charsApply,
+  getChars: getChars, charsApply: charsApply, charsSeenMap: charsSeenMap,
   loadHistory: loadHistory, saveHistory: saveHistory, pushRecord: pushRecord,
   getProfile: getProfile, setProfile: setProfile
 };

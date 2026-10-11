@@ -486,6 +486,9 @@ function newSession(opt){
   /* 锚定等级接着上一轮：上一轮表现好 +1、吃力 -1（见 anchorAfter），最多每轮升一级 */
   s.anchor=(opt.prior&&opt.prior.anchor)||1;
   s.startLevel=s.anchor;   /* 兼容页面/测试里显示起测关 */
+  /* 已测过的字（跨轮持久，来自字库）：选句优先挑含新字的句子，
+     读过的句子自然沉底——不然锚定在低级时同一批浅句会反复出，白读 */
+  s.tested=opt.tested||null;
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
@@ -637,11 +640,14 @@ function pickSentence(s){
   var best=null, bestScore=-1e9;
   for(var i=0;i<SENTENCES.length;i++){
     if(s.used[i]) continue;
-    var sen=SENTENCES[i], score=0;
+    var sen=SENTENCES[i], score=0, fresh=0;
     for(var k=0;k<sen.uniq.length;k++){
       var c=sen.uniq[k], L=LEVEL_OF[c]||1;
-      score += s.seen[c] ? SENT_SKIP : Math.max(0, 6-1.6*Math.abs(L-target));
+      var done = s.seen[c] || (s.tested && s.tested[c]);   /* 本轮读过 或 字库里判过 */
+      if(done){ score += SENT_SKIP; }
+      else { score += Math.max(0, 6-1.6*Math.abs(L-target)); fresh++; }
     }
+    if(fresh===0) score*=0.15;   /* 整句的字都判过：几乎不选（实在没得选才轮到） */
     score = score/Math.sqrt(sen.uniq.length) + Math.random()*0.5;
     if(score>bestScore){ bestScore=score; best=i; }
   }
