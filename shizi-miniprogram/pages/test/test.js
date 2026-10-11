@@ -83,10 +83,8 @@ Page({
         }, 900);
       }
       s.shownLevel = q.level;
-      patch.lvChip = '第 ' + q.level + ' 关';
-      patch.progText = s.phase === 'warmup' ? '热身中，先认识几个老朋友'
-        : (s.phase === 'topup' ? ('回头复核：再把第 ' + q.level + ' 关确认几题')
-                               : ('正在挑战：' + lv.name));
+      patch.lvChip = '本轮认出 ' + s.stars + ' 字';
+      patch.progText = q.sentence ? '奖励：把这句话读出来' : ('正在挑战：' + lv.name);
       patch.qText = '已做 ' + s.count + ' 题 · 最多 ' + (s.cap || E.MAX_Q) + ' 题';
       if (s.mode === 'read') {
         patch.prompt = '请小朋友把这个字读出来';

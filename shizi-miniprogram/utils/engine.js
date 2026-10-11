@@ -502,8 +502,21 @@ function newSession(opt){
 
 function pickChar(s,level){
   var pool=s.pools[level-1];
+  /* 优先抽"没测过"的字（字库里判过的算测过）：锚定在低级时池子每轮
+     重洗、随机抽会反复出认得的字，认识的字数就不涨了（2026-10-11
+     家长反馈"答了好几轮一直是 97 个字"）。测完这级的新字才会出复习题 */
+  if(pool&&pool.length&&s.tested){
+    for(var i=pool.length-1;i>=0;i--){
+      if(!s.tested[pool[i]]) return pool.splice(i,1)[0];
+    }
+  }
   if(pool&&pool.length) return pool.pop();
   var arr=LEVELS[level-1].chars;
+  if(s.tested){
+    var un=[]; 
+    for(var j=0;j<arr.length;j++){ if(!s.tested[arr[j]]) un.push(arr[j]); }
+    if(un.length) arr=un;
+  }
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
@@ -661,6 +674,7 @@ function bonusSentence(s){
   s.used[idx]=1;
   s.curSentence=SENTENCES[idx];
   s.marks={};
+  s.coreOK=0;
   s.bonusMode=1;   /* 奖励句的字不占轮次计数（s.count），但照常进答案/字库 */
   return {level:s.curSentence.lv, ch:s.curSentence.t, sentence:true, sen:s.curSentence, bonus:true};
 }
@@ -728,9 +742,10 @@ function nextQuestion(s){
 
   /* 锚定出题：主测锚这一级；每 4 题穿插 1 题高两级（抽查）、1 题低一级（回顾）。
      抽查对了也不升级——升级只发生在轮与轮之间（anchorAfter，每轮最多 +1） */
-  /* 本轮前 4 题全对（含高两级抽查）→ 第 5 题换成一句本层次的句子当奖励 */
-  if(s.mode==='read' && s.count===4 && !s.bonusUsed && s.answers.length>=4 &&
-     s.answers[0].correct && s.answers[1].correct && s.answers[2].correct && s.answers[3].correct){
+  /* 锚定级连对 5 题 → 接下来这题换成一句本层次的句子当奖励。
+     只数锚定级（含低一级回顾）：高两级抽查不影响资格——中等孩子
+     锚定级全对、抽查答错，也该拿到奖励（2026-10-11"一直没出来"的根因） */
+  if(s.mode==='read' && (s.coreOK||0)>=5 && !s.bonusUsed){
     s.bonusUsed=1;
     var bq=bonusSentence(s);
     if(bq){ s.q=bq; return s.q; }
@@ -761,6 +776,8 @@ function answerQuestion(s,correct){
   s.answers.push({level:lv, ch:q.ch, correct:!!correct});
   s.asked[lv]=(s.asked[lv]||0)+1;
   if(correct){ s.correct[lv]=(s.correct[lv]||0)+1; s.stars++; }
+  /* 锚定级连对计数（抽查题不算也不清零） */
+  if(lv<=(s.anchor||1)){ if(correct) s.coreOK=(s.coreOK||0)+1; else s.coreOK=0; }
 
   s.q=null;
   return {level:lv, correct:!!correct, ch:q.ch};
