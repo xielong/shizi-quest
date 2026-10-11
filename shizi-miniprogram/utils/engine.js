@@ -481,7 +481,7 @@ function priorTrim(asked, correct, rounds, tested, lbFloor, anchor){
    调用方一句 store.setPrior(mode, E.priorNext(s, floor)) 就够。 */
 function priorNext(s, lbFloor, anchor){
   if(lbFloor===undefined) lbFloor=(s.prior&&s.prior.lbFloor)||0;
-  if(anchor===undefined) anchor=(s.prior&&s.prior.anchor)||1;
+  if(anchor===undefined) anchor=s.anchor||1;
   var mc=priorMerge(s);
   return priorTrim(mc.asked, mc.correct, (s.priorRounds||0)+1, testedTotal(s), lbFloor, anchor);
 }
@@ -529,9 +529,11 @@ function newSession(opt){
        前几题都是最简单的字，孩子先有成就感；
      · 第二轮：从上一轮分界下面两关起，还是偏简单；
      · 第三轮起：分界下面一关起，证据直接落在分界附近 */
-  /* 锚定等级接着上一轮：上一轮表现好 +1、吃力 -1（见 anchorAfter），最多每轮升一级 */
-  s.anchor=(opt.prior&&opt.prior.anchor)||1;
-  s.startLevel=s.anchor;   /* 兼容页面/测试里显示起测关 */
+  /* 锚定等级＝"第一个还没出完的级"，从字库覆盖【现算】（2026-10-11 定）。
+     以前锚存在先验里增量调整，老版本写入的高锚（按"认识六成"冲上去的）
+     一直带着走——读一读停在高级出题，一级剩的两个字永远轮不到 */
+  s.anchor=anchorFor(mode, covByLevelOf(s.tested||{}));
+  s.startLevel=s.anchor;
   /* 已测过的字（跨轮持久，来自字库）：选句优先挑含新字的句子，
      读过的句子自然沉底——不然锚定在低级时同一批浅句会反复出，白读 */
   s.tested=opt.tested||null;
@@ -818,20 +820,22 @@ function nextQuestion(s){
 
 /* 轮与轮之间的锚定调整：锚这一级表现好（≥70%）→ 下轮 +1（最多）；
    明显吃力（<30%）→ 退 1 级；抽查题不影响升降——认识高级也不跳 */
-function anchorAfter(s, covByLevel){
-  var a=s.anchor||1, size=LEVELS[a-1].size;
-  var cov=(covByLevel&&covByLevel[a])||0;
-  if(s.mode==='sentence'){
-    /* 句子模式：只考核句库里有的字（句外的字归读一读管），锚不超过句库最高级 */
-    var need=SENT_REACH[a]||0;
-    if(need>0 && cov>=need) return Math.min(SENT_TOP, a+1);
-    return Math.min(a, SENT_TOP);
+/* 已测字表 → 各级覆盖数 */
+function covByLevelOf(map){
+  var by={};
+  if(map){ for(var c in map){ if(Object.prototype.hasOwnProperty.call(map,c)){ var L=LEVEL_OF[c]; if(L) by[L]=(by[L]||0)+1; } } }
+  return by;
+}
+/* 锚＝第一个还没出完的级（句子模式只考核句库可达字、不超句库最高级） */
+function anchorFor(mode, covByLevel){
+  var cap=(mode==='sentence')?SENT_TOP:LEVELS.length, a=1;
+  for(var i=1;i<cap;i++){
+    var need=(mode==='sentence')?(SENT_REACH[i]||0):LEVELS[i-1].size;
+    var cov=(covByLevel&&covByLevel[i])||0;
+    if(cov<need) break;
+    a=i+1;
   }
-  /* 读一读：这一级的字全部测过（认识或生字都算）才升——出完才往上 */
-  if(cov>=size) return Math.min(LEVELS.length, a+1);
-  var n=(s.asked&&s.asked[a])||0, k=(s.correct&&s.correct[a])||0;
-  if(n>=2 && k/n<0.3) return Math.max(1, a-1);   /* 明显吃力退一级 */
-  return a;
+  return Math.min(a, cap);
 }
 
 function answerQuestion(s,correct){
@@ -1206,4 +1210,4 @@ function levelFromKnown(n){
 }
 
 /* ---- 导出 ---- */
-module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress, levelFromKnown, anchorAfter };
+module.exports = { LEVELS, AGE_REF, SENTENCE_TEXT, LEVEL_OF, NOT_SCORED, SENTENCES, EXTRAP_DECAY, MIN_TESTED, EXTEND_N, WARM_N, BLOCK, PASS_NEED, TOPN, MAX_Q, SENT_WARM, SENT_MAX, SENT_CEIL, SENT_SKIP, REV_NEED, EARN_RATE, DECAY, PRIOR_CAP, shuffle, clamp, wilson, newSession, pickChar, makeQuestion, rateAt, boundaryOfCounts, findBoundary, topupNext, stairDecide, sentTarget, pickSentence, nextSentence, submitSentence, sentenceSeenCount, nextQuestion, answerQuestion, priorCount, priorTrim, priorMerge, priorNext, testedTotal, extendSession, BOOT_N, randn, pointsOf, totalOf, innerRate, outerAllowance, bootstrapInterval, computeResult, todayStr, PANDA_PARTS, pandaUnlocked, pandaNext, pandaEarn, SCENES, sceneUnlocked, sceneCur, sceneNext, CHEER, SOFT, PRAISE_END, modeName, levelProgress, levelFromKnown, anchorFor, covByLevelOf };

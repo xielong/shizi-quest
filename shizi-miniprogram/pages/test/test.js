@@ -297,13 +297,8 @@ Page({
 
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
-    /* 锚定升级按"覆盖"：这一级的字全部测过（认识或生字）才升 */
-    var byLv = {};
-    Object.keys(store.charsSeenMap()).forEach(function (ch) {
-      var L = E.LEVEL_OF[ch] || 1;
-      byLv[L] = (byLv[L] || 0) + 1;
-    });
-    store.setPrior(s.mode, E.priorNext(s, floor, E.anchorAfter(s, byLv)));
+    /* 锚定等级已改为每轮开测时从字库现算（anchorFor），这里只存证据 */
+    store.setPrior(s.mode, E.priorNext(s, floor));
 
     /* 豆豆成长值 = 累计认识的字数（2026-10-10 统一账本；max 只增不减，
        孩子忘掉一个字豆豆也不会缩回去） */
