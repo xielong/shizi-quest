@@ -42,6 +42,7 @@ Page({
   onLoad: function () {
     this.setData({ bubble: BUBBLES[Math.floor(Math.random() * BUBBLES.length)] });
     this.loadPlayers();
+    this.refresh();   /* onLoad 也刷一次：只靠 onShow，个别机型首帧会拿到空文案 */
   },
 
   onShow: function () { this.refresh(); },
@@ -172,8 +173,22 @@ Page({
     });
   },
 
-  /* ---- 把豆豆和进度刷成最新（每次回到首页都调） ---- */
+  /* ---- 把豆豆和进度刷成最新（每次回到首页都调） ----
+     整体兜底：中途任何一步抛错都不能让进度文案空着（2026-10-11
+     家长反馈"文字有时不显示"）——失败 300ms 后重试一次 */
   refresh: function () {
+    try {
+      this.paintProgress();
+    } catch (e) {
+      var that = this;
+      if (!this._retry) {
+        this._retry = 1;
+        setTimeout(function () { that._retry = 0; that.refresh(); }, 300);
+      }
+    }
+  },
+
+  paintProgress: function () {
     var total = store.pandaTotal();
     var cur = E.sceneCur(total);
     var next = E.pandaNext(total);

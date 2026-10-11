@@ -23,7 +23,7 @@
   <!-- 养成进度 -->
   <view class="pp">
     <view class="bar"><view style="width:{{ppPct}}%"></view></view>
-    <view class="pp-text">{{ppText}}</view>
+    <view class="pp-text">{{ppText || '豆豆在等你认新字哦'}}</view>
     <view class="chips">
       <text wx:for="{{chips}}" wx:key="id" class="chip2 {{item.on?'on':''}}">{{item.emoji}}</text>
     </view>
