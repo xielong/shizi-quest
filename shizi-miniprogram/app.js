@@ -14,6 +14,8 @@ App({
   },
 
   onLaunch: function () {
+    /* 一次性把豆豆成长值迁到"认识字数"账本（见 store.rebasePandasToChars） */
+    store.rebasePandasToChars();
     this.globalData.profile = store.getProfile();
   },
 

@@ -180,6 +180,20 @@ function charsApply(answers) {
   return v;
 }
 
+/* 一次性迁移（2026-10-10 账本统一）：豆豆成长值重置为字库认识字数。
+   旧账本按答对×2 记点，和新门槛（认识满 N 字）对不上——不重置的话
+   max 保底会让豆豆冻结在旧点数上、永远追不上。迁移后两边 1:1 同步。 */
+var PANDA_REBASE_KEY = 'shizi_panda_rebase_v1';
+function rebasePandasToChars() {
+  if (safeGet(PANDA_REBASE_KEY)) return;          /* 只做一次 */
+  safeSet(PANDA_REBASE_KEY, '1');
+  loadPlayers().list.forEach(function (p) {
+    var v = parse(safeGet(keyOf(BASE_CHARS, p.id)), {});
+    var known = (v && v.known && typeof v.known === 'object') ? Object.keys(v.known).length : 0;
+    safeSet(keyOf(BASE_PANDA, p.id), String(known));
+  });
+}
+
 /* 已测过的字（认识+生字合并成一张查表），给引擎选句用 */
 function charsSeenMap() {
   var v = getChars(), m = {}, k;
@@ -238,6 +252,7 @@ module.exports = {
   sceneSeen: sceneSeen, sceneSetSeen: sceneSetSeen,
   getPrior: getPrior, setPrior: setPrior,
   getChars: getChars, charsApply: charsApply, charsSeenMap: charsSeenMap,
+  rebasePandasToChars: rebasePandasToChars,
   loadHistory: loadHistory, saveHistory: saveHistory, pushRecord: pushRecord,
   getProfile: getProfile, setProfile: setProfile
 };
