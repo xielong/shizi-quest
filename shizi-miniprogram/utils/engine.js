@@ -661,6 +661,7 @@ function bonusSentence(s){
   s.used[idx]=1;
   s.curSentence=SENTENCES[idx];
   s.marks={};
+  s.bonusMode=1;   /* 奖励句的字不占轮次计数（s.count），但照常进答案/字库 */
   return {level:s.curSentence.lv, ch:s.curSentence.t, sentence:true, sen:s.curSentence, bonus:true};
 }
 
@@ -705,12 +706,14 @@ function submitSentence(s,marks){
     s.seen[c]=1;
     var L=LEVEL_OF[c]||1;
     s.asked[L]=(s.asked[L]||0)+1;
-    s.count++; fresh++;
+    if(!s.bonusMode) s.count++;   /* 奖励句是白送的：不占本轮名额 */
+    fresh++;
     if(marks&&marks[c]){ marked++; s.answers.push({level:L, ch:c, correct:false}); }
     else { known++; s.correct[L]=(s.correct[L]||0)+1; s.answers.push({level:L, ch:c, correct:true}); }
   }
   s.stars+=known;
-  s.sentCount++;
+  if(s.mode==='sentence') s.sentCount++;
+  s.bonusMode=0;
   s.curSentence=null; s.marks={};
   return {marked:marked, known:known, fresh:fresh, sen:sen};
 }
