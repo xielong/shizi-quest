@@ -297,9 +297,9 @@ Page({
 
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
-    /* 锚定升级按"收集"：这一级认出六成字才升（knownByLevel 来自字库） */
+    /* 锚定升级按"覆盖"：这一级的字全部测过（认识或生字）才升 */
     var byLv = {};
-    Object.keys(inv.known).forEach(function (ch) {
+    Object.keys(store.charsSeenMap()).forEach(function (ch) {
       var L = E.LEVEL_OF[ch] || 1;
       byLv[L] = (byLv[L] || 0) + 1;
     });

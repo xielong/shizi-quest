@@ -773,12 +773,13 @@ function nextQuestion(s){
 
 /* 轮与轮之间的锚定调整：锚这一级表现好（≥70%）→ 下轮 +1（最多）；
    明显吃力（<30%）→ 退 1 级；抽查题不影响升降——认识高级也不跳 */
-function anchorAfter(s, knownByLevel){
+function anchorAfter(s, covByLevel){
   var a=s.anchor||1, size=LEVELS[a-1].size;
-  /* 升级只看"收集"：这一级认出六成字才升——锚不会跑到孩子没掌握
-     的地方去（2026-10-11 反馈"一二级没出完就大量出六七级"） */
-  var kn=(knownByLevel&&knownByLevel[a])||0;
-  if(kn>=size*0.6) return Math.min(LEVELS.length, a+1);
+  /* 升级只看"覆盖"：这一级的字全部测过（认识或生字都算）才升——
+     家长的标准是"出完才往上"。原来按"认识六成"升级，认识数早过线
+     就冲上去了，一二级没测完的字再也不出（2026-10-11 反馈的最大问题） */
+  var cov=(covByLevel&&covByLevel[a])||0;
+  if(cov>=size) return Math.min(LEVELS.length, a+1);
   var n=(s.asked&&s.asked[a])||0, k=(s.correct&&s.correct[a])||0;
   if(n>=2 && k/n<0.3) return Math.max(1, a-1);   /* 明显吃力退一级 */
   return a;
