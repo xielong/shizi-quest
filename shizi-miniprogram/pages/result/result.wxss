@@ -78,3 +78,7 @@
   width: 600px;
   height: 800px;
 }
+
+/* 门槛数字：认识满多少字解锁（家长要求直接标出来） */
+.pw-item .at { margin-top: 0; color: #a0aec6; font-size: 19rpx; }
+.pw-item.on .at { color: #4fd6a4; }
