@@ -305,7 +305,36 @@ var SENTENCE_TEXT=[
   '谁踩了地上的花？是小猫',
   '我的书不见了，爸爸说是小熊带走了',
   '妈妈抱我一下，我就不害怕了',
-  '天黑了，月亮也睡了'
+  '天黑了，月亮也睡了',
+  '我在门口听雨',
+  '听，小鸟在树上唱歌',
+  '山上有火，不要去',
+  '天黑了，他点火看书',
+  '下雨啦，快回家',
+  '小猫来啦，小狗也来啦',
+  '他让我先走',
+  '妈妈让小猪先吃',
+  '他心很好，大家都爱他',
+  '多喝水，少喝汤',
+  '写字要慢，不要快',
+  '他在水中游得很快',
+  '早上，太阳出来了',
+  '我天天习字，越写越好',
+  '妈妈去买菜，我买糖',
+  '哇，好大的蛋糕',
+  '弟弟哭了，妈妈抱抱他',
+  '小鸟的嘴巴尖尖的',
+  '打开窗，看月亮',
+  '鹅和鸭子在水里游',
+  '爷爷喝茶，我吃糖',
+  '这本书很好看',
+  '摸一摸，是什么',
+  '跑了一天，腿好累',
+  '小猪吃得胖胖的',
+  '羊在山上吃草',
+  '他的脸红红的',
+  '哭什么呀，不哭啦',
+  '姐姐带我去她家玩'
 ];
 /* 字 → 等级 反查表 */
 
@@ -328,6 +357,22 @@ var SENTENCES=SENTENCE_TEXT.map(function(t,idx){
   var mx=Math.max.apply(null,lvs), avg=lvs.reduce(function(a,b){return a+b;},0)/lvs.length;
   return {t:t, uniq:uniq, lvs:lvs, mx:mx, avg:avg, lv:Math.max(1,Math.min(10,Math.round(0.5*mx+0.5*avg)))};
 });
+
+/* 句库可达字：每级里"出现在至少一个句子中"的字数。
+   句子模式的覆盖门槛用它——句外的字（八~十星全部、低级别零星几个）
+   只能靠读一读测，不该堵住句子模式的升级（2026-10-11 一级"火/听"
+   两个字一直测不到的死锁就是这么来的） */
+var SENT_REACH={}, SENT_TOP=1;
+(function(){
+  var inSent={};
+  SENTENCES.forEach(function(sen){ sen.uniq.forEach(function(c){ inSent[c]=1; }); });
+  LEVELS.forEach(function(l,i){
+    var n=0; l.chars.forEach(function(c){ if(inSent[c]) n++; });
+    SENT_REACH[i+1]=n;
+    if(n>0) SENT_TOP=i+1;
+  });
+})();
+
 
 /* =========================================================================
    SECTION: ENGINE — 自适应出题 + 识字量估算（纯逻辑，不碰 DOM）
@@ -775,10 +820,14 @@ function nextQuestion(s){
    明显吃力（<30%）→ 退 1 级；抽查题不影响升降——认识高级也不跳 */
 function anchorAfter(s, covByLevel){
   var a=s.anchor||1, size=LEVELS[a-1].size;
-  /* 升级只看"覆盖"：这一级的字全部测过（认识或生字都算）才升——
-     家长的标准是"出完才往上"。原来按"认识六成"升级，认识数早过线
-     就冲上去了，一二级没测完的字再也不出（2026-10-11 反馈的最大问题） */
   var cov=(covByLevel&&covByLevel[a])||0;
+  if(s.mode==='sentence'){
+    /* 句子模式：只考核句库里有的字（句外的字归读一读管），锚不超过句库最高级 */
+    var need=SENT_REACH[a]||0;
+    if(need>0 && cov>=need) return Math.min(SENT_TOP, a+1);
+    return Math.min(a, SENT_TOP);
+  }
+  /* 读一读：这一级的字全部测过（认识或生字都算）才升——出完才往上 */
   if(cov>=size) return Math.min(LEVELS.length, a+1);
   var n=(s.asked&&s.asked[a])||0, k=(s.correct&&s.correct[a])||0;
   if(n>=2 && k/n<0.3) return Math.max(1, a-1);   /* 明显吃力退一级 */
