@@ -85,3 +85,42 @@
 .formrow picker .inp { width: 100%; box-sizing: border-box; display: block; }
 /* 原生 input 和普通 view 的默认行高不一致 → 统一固定高度 */
 .formrow .inp { height: 84rpx; line-height: 84rpx; padding: 0 24rpx; overflow: hidden; }
+
+/* ---------- 夏天的海边：冲浪效果 ---------- */
+/* 波浪层：两道半透明长条错向滚动，叠在背景的海面上 */
+.surf-layer { position: absolute; left: 0; right: 0; bottom: 4%; height: 20%; overflow: hidden; pointer-events: none; }
+.wave {
+  position: absolute; bottom: 0; left: -110%; width: 320%; height: 100%;
+  border-radius: 46% 54% 0 0 / 90% 75% 0 0;
+  background: rgba(92, 184, 255, .26);
+  animation: waveRoll 6.5s linear infinite;
+}
+.wave.b { bottom: 6%; background: rgba(255, 255, 255, .38); animation-duration: 8.6s; animation-direction: reverse; opacity: .7; }
+@keyframes waveRoll { from { transform: translateX(0); } to { transform: translateX(31%); } }
+
+/* 豆豆冲浪：入场从左侧滑进来，然后随浪起伏 */
+.surf-wrap { width: 100%; height: 100%; }
+.surf-wrap.on { animation: surfIn 1.2s cubic-bezier(.2, .8, .3, 1) both, surfBob 2.6s ease-in-out 1.2s infinite; }
+@keyframes surfIn {
+  from { transform: translateX(-130%) rotate(-8deg); }
+  75%  { transform: translateX(6%) rotate(3deg); }
+  to   { transform: translateX(0) rotate(0); }
+}
+@keyframes surfBob {
+  0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+  50%      { transform: translateY(-16rpx) rotate(3deg); }
+}
+
+/* 水花：豆豆脚边几颗小白点循环迸溅 */
+.drop {
+  position: absolute; width: 12rpx; height: 12rpx; border-radius: 50%;
+  background: rgba(255, 255, 255, .85); opacity: 0;
+}
+.drop.d1 { left: 40%; bottom: 30%; animation: dropPop 2s .3s ease-out infinite; }
+.drop.d2 { left: 48%; bottom: 24%; animation: dropPop 2s 1.1s ease-out infinite; }
+.drop.d3 { left: 56%; bottom: 32%; animation: dropPop 2s 1.7s ease-out infinite; }
+@keyframes dropPop {
+  0%   { transform: translate(0, 0) scale(.4); opacity: 0; }
+  25%  { opacity: .95; }
+  100% { transform: translate(24rpx, -44rpx) scale(1); opacity: 0; }
+}

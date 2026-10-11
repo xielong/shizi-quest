@@ -207,6 +207,7 @@ Page({
     }
 
     this.setData({
+      summer: cur.id === 'summer',
       panda: P.layers(total, this.data.facing),
       sceneSrc: P.sceneImage(total),
       sceneTag: cur.emoji + ' ' + cur.name,

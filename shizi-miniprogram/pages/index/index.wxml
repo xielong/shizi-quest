@@ -13,8 +13,17 @@
       <view wx:for="{{snow}}" wx:key="k" class="flake"
         style="left:{{item.left}}%;width:{{item.size}}rpx;height:{{item.size}}rpx;opacity:{{item.op}};animation-duration:{{item.dur}}s;animation-delay:{{item.delay}}s"></view>
     </view>
+    <!-- 夏天的海边：冲浪动画层（滚动波纹 + 水花） -->
+    <view wx:if="{{summer}}" class="surf-layer">
+      <view class="wave a"></view>
+      <view class="wave b"></view>
+      <view class="drop d1"></view><view class="drop d2"></view><view class="drop d3"></view>
+    </view>
     <view class="world-mascot {{turnCls}}" bindtap="turnPanda">
-      <image wx:for="{{panda}}" wx:key="id" class="panda-layer" src="{{item.src}}" />
+      <!-- 冲浪包裹层：入场滑入 + 持续随浪起伏（只在海边加） -->
+      <view class="surf-wrap {{summer ? 'on' : ''}}">
+        <image wx:for="{{panda}}" wx:key="id" class="panda-layer" src="{{item.src}}" />
+      </view>
     </view>
     <view class="world-tag">{{sceneTag}}</view>
     <view class="world-hint">{{turnHint}}</view>
