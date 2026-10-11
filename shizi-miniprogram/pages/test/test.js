@@ -67,7 +67,8 @@ Page({
       var stairFirst = (s.phase === 'stair' && !s._stairSeen);
       if (stairFirst) s._stairSeen = 1;
       var tip = '';
-      if (stairFirst && q.level >= 3) tip = '接着上次，从第 ' + q.level + ' 关开始';
+      if (q.sentence && q.bonus) tip = '做得太棒啦，奖励一句话！读完它 🎁';
+      else if (stairFirst && q.level >= 3) tip = '接着上次，从第 ' + q.level + ' 关开始';
       else if (!stairFirst && s.shownLevel && q.level > s.shownLevel) tip = '升到第 ' + q.level + ' 关啦！';
       if (tip) {
         patch.fbCls = 'info';
@@ -160,7 +161,7 @@ Page({
   /* ---------- 读句子：点字标记 ---------- */
   toggleMark: function (e) {
     var s = this.s;
-    if (!s || s.mode !== 'sentence' || this.locked) return;
+    if (!s || !s.curSentence || this.locked) return;
     var idx = e.currentTarget.dataset.idx;
     var cell = this.data.q.cells[idx];
     var ch = cell.ch;
@@ -177,7 +178,7 @@ Page({
 
   resetMarks: function () {
     var s = this.s;
-    if (!s || s.mode !== 'sentence') return;
+    if (!s || !s.curSentence) return;
     s.marks = {};
     this.setData({
       'q.cells': this.data.q.cells.map(function (c) {

@@ -471,7 +471,8 @@ function newSession(opt){
        表现差退 1 级——就算抽查全对也不往上跳，家长要的是"先低级、偶尔穿插" */
     anchor:1,
     q:null, done:false, stars:0, count:0, stopReason:'', shownLevel:0,
-    earned:0, pandaShown:0
+    earned:0, pandaShown:0,
+    used:{}, seen:{}   /* 句子记账：句子模式用，读一读的奖励句也用 */
   };
   /* 上一轮折价带过来的证据（没有就是第一轮） */
   s.prior=(opt.prior&&opt.prior.asked)?opt.prior:null;
@@ -492,8 +493,6 @@ function newSession(opt){
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
-    s.used={};          // 已经读过的句子下标
-    s.seen={};          // 已经统计过的字
     s.curSentence=null; // 当前句子对象
     s.marks={};         // 当前句子被标成"不认识"的字
     s.sentCount=0;      // 已读句数
@@ -635,8 +634,8 @@ function sentTarget(s){
   return a;
 }
 
-function pickSentence(s){
-  var target=sentTarget(s);
+function pickSentence(s){ return pickSentenceFor(s, sentTarget(s)); }
+function pickSentenceFor(s, target){
   var best=null, bestScore=-1e9;
   for(var i=0;i<SENTENCES.length;i++){
     if(s.used[i]) continue;
@@ -652,6 +651,17 @@ function pickSentence(s){
     if(score>bestScore){ bestScore=score; best=i; }
   }
   return (best===null)?null:best;
+}
+
+/* 读一读的奖励句（2026-10-10 家长的点子：做得好就出现一句这个层次的句子）：
+   挑一句目标层级、含新字多的句子，当作这轮的小奖励 */
+function bonusSentence(s){
+  var idx=pickSentenceFor(s, s.anchor||1);
+  if(idx===null) return null;
+  s.used[idx]=1;
+  s.curSentence=SENTENCES[idx];
+  s.marks={};
+  return {level:s.curSentence.lv, ch:s.curSentence.t, sentence:true, sen:s.curSentence, bonus:true};
 }
 
 function nextSentence(s){
@@ -715,6 +725,13 @@ function nextQuestion(s){
 
   /* 锚定出题：主测锚这一级；每 4 题穿插 1 题高两级（抽查）、1 题低一级（回顾）。
      抽查对了也不升级——升级只发生在轮与轮之间（anchorAfter，每轮最多 +1） */
+  /* 本轮前 4 题全对（含高两级抽查）→ 第 5 题换成一句本层次的句子当奖励 */
+  if(s.mode==='read' && s.count===4 && !s.bonusUsed && s.answers.length>=4 &&
+     s.answers[0].correct && s.answers[1].correct && s.answers[2].correct && s.answers[3].correct){
+    s.bonusUsed=1;
+    var bq=bonusSentence(s);
+    if(bq){ s.q=bq; return s.q; }
+  }
   var i=s.count, a=s.anchor||1, lv=a;
   if(i%4===3) lv=Math.min(a+2, LEVELS.length);
   else if(i%4===2 && a>1) lv=a-1;
