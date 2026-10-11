@@ -490,6 +490,9 @@ function newSession(opt){
   /* 已测过的字（跨轮持久，来自字库）：选句优先挑含新字的句子，
      读过的句子自然沉底——不然锚定在低级时同一批浅句会反复出，白读 */
   s.tested=opt.tested||null;
+  /* 已认识的字（跨轮持久）：偶尔复习用——认识的字再出现给孩子信心，
+     复习答对不重复计入认识数（页面的新认计数只数没判过的字） */
+  s.known=opt.known||null;
   if(mode==='sentence'){
     // 句子模式：不按单字爬梯子，而是每句覆盖一批字
     s.phase='sentence';
@@ -500,28 +503,34 @@ function newSession(opt){
   return s;
 }
 
-function pickChar(s,level){
+function pickChar(s,level,wantReview){
+  var arr=LEVELS[level-1].chars;
+  /* 复习题：从"认识的字"里抽一个（给信心；答对不重复计新认） */
+  if(wantReview && s.known){
+    var kn=[];
+    for(var r=0;r<arr.length;r++){ if(s.known[arr[r]]) kn.push(arr[r]); }
+    if(kn.length) return kn[Math.floor(Math.random()*kn.length)];
+  }
   var pool=s.pools[level-1];
   /* 优先抽"没测过"的字（字库里判过的算测过）：锚定在低级时池子每轮
      重洗、随机抽会反复出认得的字，认识的字数就不涨了（2026-10-11
-     家长反馈"答了好几轮一直是 97 个字"）。测完这级的新字才会出复习题 */
+     家长反馈"答了好几轮一直是 97 个字"）。测完这级的新字才出旧字 */
   if(pool&&pool.length&&s.tested){
     for(var i=pool.length-1;i>=0;i--){
       if(!s.tested[pool[i]]) return pool.splice(i,1)[0];
     }
   }
   if(pool&&pool.length) return pool.pop();
-  var arr=LEVELS[level-1].chars;
   if(s.tested){
-    var un=[]; 
+    var un=[];
     for(var j=0;j<arr.length;j++){ if(!s.tested[arr[j]]) un.push(arr[j]); }
     if(un.length) arr=un;
   }
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-function makeQuestion(s,level){
-  var ch=pickChar(s,level);
+function makeQuestion(s,level,wantReview){
+  var ch=pickChar(s,level,wantReview);
   var q={level:level, ch:ch, options:null};
   if(s.mode==='listen'){
     var others=[], pool=LEVELS[level-1].chars;
@@ -648,11 +657,15 @@ function sentTarget(s){
 }
 
 function pickSentence(s){ return pickSentenceFor(s, sentTarget(s)); }
-function pickSentenceFor(s, target){
+function pickSentenceFor(s, target, maxCharLv){
   var best=null, bestScore=-1e9;
   for(var i=0;i<SENTENCES.length;i++){
     if(s.used[i]) continue;
-    var sen=SENTENCES[i], score=0, fresh=0;
+    var sen=SENTENCES[i], score=0, fresh=0, over=0;
+    if(maxCharLv){                       /* 句里有超纲字 → 不选（奖励句别吓着孩子） */
+      for(var m3=0;m3<sen.uniq.length;m3++){ if((LEVEL_OF[sen.uniq[m3]]||1)>maxCharLv){ over=1; break; } }
+      if(over) continue;
+    }
     for(var k=0;k<sen.uniq.length;k++){
       var c=sen.uniq[k], L=LEVEL_OF[c]||1;
       var done = s.seen[c] || (s.tested && s.tested[c]);   /* 本轮读过 或 字库里判过 */
@@ -669,7 +682,7 @@ function pickSentenceFor(s, target){
 /* 读一读的奖励句（2026-10-10 家长的点子：做得好就出现一句这个层次的句子）：
    挑一句目标层级、含新字多的句子，当作这轮的小奖励 */
 function bonusSentence(s){
-  var idx=pickSentenceFor(s, s.anchor||1);
+  var idx=pickSentenceFor(s, s.anchor||1, (s.anchor||1)+2);
   if(idx===null) return null;
   s.used[idx]=1;
   s.curSentence=SENTENCES[idx];
@@ -742,30 +755,32 @@ function nextQuestion(s){
 
   /* 锚定出题：主测锚这一级；每 4 题穿插 1 题高两级（抽查）、1 题低一级（回顾）。
      抽查对了也不升级——升级只发生在轮与轮之间（anchorAfter，每轮最多 +1） */
-  /* 锚定级连对 5 题 → 接下来这题换成一句本层次的句子当奖励。
-     只数锚定级（含低一级回顾）：高两级抽查不影响资格——中等孩子
-     锚定级全对、抽查答错，也该拿到奖励（2026-10-11"一直没出来"的根因） */
-  if(s.mode==='read' && (s.coreOK||0)>=5 && !s.bonusUsed){
+  /* 本轮答对 4 题（复习也算——孩子努力了就有奖励）→ 奖励一句 */
+  if(s.mode==='read' && !s.bonusUsed && s.stars>=4){
     s.bonusUsed=1;
     var bq=bonusSentence(s);
     if(bq){ s.q=bq; return s.q; }
   }
-  var i=s.count, a=s.anchor||1, lv=a;
-  if(i%4===3) lv=Math.min(a+2, LEVELS.length);
-  else if(i%4===2 && a>1) lv=a-1;
+  /* 节奏（2026-10-11 家长定）：主测锚定级的新字；每 5 题穿插 1 题高一级
+     抽查（原高两级太挫败）＋ 1 题认识的字复习（给信心，不重复计新认） */
+  var i=s.count, a=s.anchor||1, lv=a, review=false;
+  if(i%5===4) lv=Math.min(a+1, LEVELS.length);
+  else if(i%5===2 && s.known) review=true;
   if(!s.asked[lv]){ s.asked[lv]=0; s.correct[lv]=0; }
-  s.q=makeQuestion(s,lv);
+  s.q=makeQuestion(s,lv,review);
   return s.q;
 }
 
 /* 轮与轮之间的锚定调整：锚这一级表现好（≥70%）→ 下轮 +1（最多）；
    明显吃力（<30%）→ 退 1 级；抽查题不影响升降——认识高级也不跳 */
-function anchorAfter(s){
-  var a=s.anchor||1;
+function anchorAfter(s, knownByLevel){
+  var a=s.anchor||1, size=LEVELS[a-1].size;
+  /* 升级只看"收集"：这一级认出六成字才升——锚不会跑到孩子没掌握
+     的地方去（2026-10-11 反馈"一二级没出完就大量出六七级"） */
+  var kn=(knownByLevel&&knownByLevel[a])||0;
+  if(kn>=size*0.6) return Math.min(LEVELS.length, a+1);
   var n=(s.asked&&s.asked[a])||0, k=(s.correct&&s.correct[a])||0;
-  var rate=(n>=2)?(k/n):((s.count>=5)?(s.stars/s.count):1);
-  if(rate>=0.7) return Math.min(LEVELS.length, a+1);
-  if(rate<0.3) return Math.max(1, a-1);
+  if(n>=2 && k/n<0.3) return Math.max(1, a-1);   /* 明显吃力退一级 */
   return a;
 }
 

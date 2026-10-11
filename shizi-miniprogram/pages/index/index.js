@@ -258,7 +258,8 @@ Page({
     var session = E.newSession({
       name: p.name, age: p.age, mode: mode,
       prior: store.getPrior(mode),
-      tested: store.charsSeenMap()
+      tested: store.charsSeenMap(),
+      known: store.getChars().known
     });
     app.globalData.session = session;
     wx.navigateTo({ url: '/pages/test/test' });

@@ -83,7 +83,7 @@ Page({
         }, 900);
       }
       s.shownLevel = q.level;
-      patch.lvChip = '本轮认出 ' + s.stars + ' 字';
+      patch.lvChip = '本轮新认 ' + (s.earned || 0) + ' 字';   /* 只算新认识的，复习不重复计 */
       patch.progText = q.sentence ? '奖励：把这句话读出来' : ('正在挑战：' + lv.name);
       patch.qText = '已做 ' + s.count + ' 题 · 最多 ' + (s.cap || E.MAX_Q) + ' 题';
       if (s.mode === 'read') {
@@ -297,8 +297,13 @@ Page({
 
     /* 一轮结束：把这一轮的证据折价存起来，下一轮开测时带进去
        （一场题少，精度靠跨轮累积补；累计测过多少字也记在里面，用来判样本够不够） */
-    /* 锚定等级写回先验：本轮锚级表现好 → 下轮锚 +1（最多），吃力 → -1 */
-    store.setPrior(s.mode, E.priorNext(s, floor, E.anchorAfter(s)));
+    /* 锚定升级按"收集"：这一级认出六成字才升（knownByLevel 来自字库） */
+    var byLv = {};
+    Object.keys(inv.known).forEach(function (ch) {
+      var L = E.LEVEL_OF[ch] || 1;
+      byLv[L] = (byLv[L] || 0) + 1;
+    });
+    store.setPrior(s.mode, E.priorNext(s, floor, E.anchorAfter(s, byLv)));
 
     /* 豆豆成长值 = 累计认识的字数（2026-10-10 统一账本；max 只增不减，
        孩子忘掉一个字豆豆也不会缩回去） */

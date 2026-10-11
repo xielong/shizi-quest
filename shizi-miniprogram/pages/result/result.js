@@ -152,7 +152,8 @@ Page(Object.assign({
     var session = E.newSession({
       name: profile.name, age: profile.age, mode: r.mode,
       prior: store.getPrior(r.mode),
-      tested: store.charsSeenMap()
+      tested: store.charsSeenMap(),
+      known: store.getChars().known
     });
     app.globalData.session = session;
     wx.redirectTo({ url: '/pages/test/test' });
