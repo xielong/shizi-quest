@@ -53,9 +53,13 @@ Page({
 
     var patch = { qKey: this._qKey, prog: Math.round(E.levelProgress(s) * 1000) / 10 };
 
-    if (s.mode === 'sentence') {
-      patch.lvChip = '第 ' + (s.sentCount + 1) + ' / ' + (s.sentCap || E.SENT_MAX) + ' 句';
-      patch.progText = '读句子：看看这句话认识几个字';
+    if (q.sentence) {
+      /* 句子界面——不管是读句子模式还是读一读的奖励句（按题目类型分派，
+         不能按模式：奖励句在 read 模式下也要用句子样式） */
+      patch.lvChip = s.mode === 'sentence'
+        ? ('第 ' + (s.sentCount + 1) + ' / ' + (s.sentCap || E.SENT_MAX) + ' 句')
+        : '奖励句 🎁';
+      patch.progText = s.mode === 'sentence' ? '读句子：看看这句话认识几个字' : '奖励：把这句话读出来';
       patch.qText = '测到 ' + s.count + ' 个字';
       patch.prompt = '请小朋友把这句话读出来';
       patch.doneText = '都会，下一句 ✓';
