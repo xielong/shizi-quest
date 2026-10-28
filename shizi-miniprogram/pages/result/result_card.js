@@ -104,7 +104,7 @@ module.exports = {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 40px sans-serif';
-    ctx.fillText('识字大冒险', W / 2, 86);
+    ctx.fillText('识字冒险记', W / 2, 86);
     ctx.font = '24px sans-serif';
     ctx.fillText(profile.name + '（' + profile.age + ' 岁）已经认识', W / 2, 140);
 
@@ -150,7 +150,7 @@ module.exports = {
       ctx.font = '22px sans-serif';
       ctx.fillText('每天认识几个字，和豆豆一起长大 · ' + E.todayStr(), W / 2, 745);
       ctx.fillStyle = '#c3cfdf';
-      ctx.fillText('识字大冒险 · 微信小程序', W / 2, 780);
+      ctx.fillText('识字冒险记 · 微信小程序', W / 2, 780);
     });
   }
 };

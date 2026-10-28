@@ -1,9 +1,9 @@
 {
-  "description": "识字大冒险 —— 给小朋友的识字量小测试（微信小程序版）",
-  "appid": "wx470eb558e7b6a335",
+  "description": "识字冒险记 —— 给小朋友的识字量小测试（微信小程序版）",
+  "appid": "wx5d8a5c1f8db34179",
   "projectname": "shizi-miniprogram",
   "compileType": "miniprogram",
-  "libVersion": "3.5.5",
+  "libVersion": "3.17.4",
   "setting": {
     "es6": true,
     "enhance": true,
