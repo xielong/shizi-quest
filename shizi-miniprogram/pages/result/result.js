@@ -20,12 +20,28 @@ Page(Object.assign({
     refRows: [],
     wrong: [],
     certMeta: '',
-    facing: 'front'
+    facing: 'front',
+    shareMode: false,
+    shareName: '',
+    shareKnown: 0
   },
 
-  onLoad: function () {
+  onLoad: function (query) {
     var r = app.globalData.lastResult;
-    if (!r) { wx.redirectTo({ url: '/pages/index/index' }); return; }
+    if (!r) {
+      /* 从朋友圈（单页模式）或分享链接进来时，内存里没有这次的成绩，
+         也不允许跳到别的页面 —— 渲染一张静态邀请卡就行 */
+      var q = query || {};
+      this.setData({
+        shareMode: true,
+        shareName: q.n || '',
+        shareKnown: Number(q.k) || 0,
+        panda: P.layers(0, 'front'),
+        sceneSrc: P.sceneImage(0),
+        sceneTag: '🌱 豆豆的小世界'
+      });
+      return;
+    }
     var fresh = app.globalData.lastFresh || { parts: [], scenes: [] };
     var profile = app.profile();
     var total = store.pandaTotal();
@@ -110,6 +126,55 @@ Page(Object.assign({
     });
 
     this.animNumber(knownTotal);
+  },
+
+  /* 页面渲染完就把分享图画好备着：点右上角「分享」时是同步取值的，
+     来不及现画，只能提前准备（没成功就退化成系统自动截图） */
+  onReady: function () {
+    var that = this;
+    if (this.data.shareMode) return;
+    setTimeout(function () {
+      if (that.prepareShareImage) that.prepareShareImage();
+    }, 500);
+  },
+
+  /* ---- 分享给好友 / 微信群 ---- */
+  onShareAppMessage: function () {
+    var r = this.data.r;
+    var name = this.data.name || '小朋友';
+    var out = {
+      title: r
+        ? (name + '已经认识 ' + (r.knownTotal || 0) + ' 个字啦，你也来试试～')
+        : '玩个游戏，看看小朋友认识多少字',
+      /* 成绩只存在内存里，别人点开拿不到，所以统一落回首页 */
+      path: '/pages/index/index?from=share'
+    };
+    if (this._cardImg) out.imageUrl = this._cardImg;
+    return out;
+  },
+
+  /* ---- 分享到朋友圈（入口只在右上角菜单，这里告诉家长怎么走） ---- */
+  onShareTimeline: function () {
+    var r = this.data.r;
+    var name = this.data.name || '小朋友';
+    var out = {
+      title: r
+        ? (name + '认识了 ' + (r.knownTotal || 0) + ' 个字 · 识字冒险记')
+        : '识字冒险记 · 玩个游戏，看看小朋友认识多少字',
+      query: r ? ('k=' + (r.knownTotal || 0) + '&n=' + encodeURIComponent(name)) : ''
+    };
+    if (this._squareImg) out.imageUrl = this._squareImg;
+    return out;
+  },
+
+  /* 朋友圈没有 open-type 按钮，只能引导去右上角 */
+  guideTimeline: function () {
+    wx.showModal({
+      title: '分享到朋友圈',
+      content: '朋友圈要从右上角进：点一下右上角的「⋯」，再点「分享到朋友圈」就好啦。',
+      showCancel: false,
+      confirmText: '知道啦'
+    });
   },
 
   /* 数字滚动 */

@@ -126,5 +126,17 @@ Page({
         that.setData({ hist: [], rows: [], hasChart: false });
       }
     });
+  },
+
+  /* ---- 分享成长记录（只有右上角菜单入口） ---- */
+  onShareAppMessage: function () {
+    var first = (this.data.rows || [])[0];
+    var title = first
+      ? (first.who + '已经认识 ' + (first.est || 0) + ' 个字啦，你家小朋友呢？')
+      : '识字冒险记 —— 玩个游戏，看看小朋友认识多少字';
+    return {
+      title: title,
+      path: '/pages/index/index?from=share'
+    };
   }
 });

@@ -283,5 +283,28 @@ Page({
 
   goChars: function () { wx.navigateTo({ url: '/pages/chars/chars' }); },
   goHelp: function () { wx.navigateTo({ url: '/pages/help/help' }); },
-  goHistory: function () { wx.navigateTo({ url: '/pages/history/history' }); }
+  goHistory: function () { wx.navigateTo({ url: '/pages/history/history' }); },
+
+  /* ---- 分享 ----
+     好友卡片走 open-type="share" 按钮；朋友圈只能从右上角「⋯」进，
+     按钮只能负责把路指清楚 */
+  onShareAppMessage: function () {
+    return {
+      title: '识字冒险记 —— 玩个游戏，看看小朋友认识多少字',
+      path: '/pages/index/index?from=share'
+    };
+  },
+
+  onShareTimeline: function () {
+    return { title: '识字冒险记 —— 玩个游戏，看看小朋友认识多少字' };
+  },
+
+  guideTimeline: function () {
+    wx.showModal({
+      title: '分享到朋友圈',
+      content: '朋友圈要从右上角进：点一下右上角的「⋯」，再点「分享到朋友圈」就好啦。',
+      showCancel: false,
+      confirmText: '知道啦'
+    });
+  }
 });

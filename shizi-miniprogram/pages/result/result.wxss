@@ -1,6 +1,7 @@
 /* ---------- 结果页 ---------- */
 .hero { text-align: center; }
 .hero-title { font-size: 32rpx; font-weight: 900; color: #71809e; }
+.hero-sub { font-size: 30rpx; font-weight: 800; color: #2b3a55; margin-top: 12rpx; }
 .hero-num { margin: 10rpx 0 4rpx; }
 .big { font-size: 130rpx; font-weight: 900; color: #2b3a55; line-height: 1.1; }
 .unit { font-size: 34rpx; color: #71809e; margin-left: 8rpx; font-weight: 800; }

@@ -92,6 +92,10 @@
       <button class="btn mini" style="flex:1" bindtap="goHistory">成长记录</button>
       <button class="btn mini" style="flex:1" bindtap="goHelp">家长看这里</button>
     </view>
+    <view class="row" style="margin-top:18rpx;gap:16rpx">
+      <button class="btn ghost" style="flex:1" open-type="share">分享给好友</button>
+      <button class="btn ghost" style="flex:1" bindtap="guideTimeline">分享到朋友圈</button>
+    </view>
   </view>
 
   <view class="muted center foot-note">读一读 一轮 10 题 · 读句子 最多 7 句 · 累计测满 20 个字才给分数 · 随时可以停</view>
